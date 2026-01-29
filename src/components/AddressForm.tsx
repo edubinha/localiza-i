@@ -246,7 +246,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
               ) : (
                 <>
                   <Search className="h-4 w-4" />
-                  Buscar Locais Próximos
+                  Buscar Prestadores
                 </>
               )}
             </Button>
