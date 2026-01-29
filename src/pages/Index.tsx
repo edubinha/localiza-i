@@ -45,10 +45,10 @@ const Index = () => {
           {/* Introduction */}
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-foreground mb-2">
-              Encontre o local mais próximo
+              Encontre o local mais próximo para exames de seu colaborador
             </h2>
             <p className="text-muted-foreground">
-              Importe sua planilha com os locais disponíveis e informe seu endereço para encontrar os 3 locais mais próximos para realizar seu exame ocupacional.
+              Importe sua planilha de prestadores e busque os mais próximos do endereço informado.
             </p>
           </div>
 
@@ -68,7 +68,7 @@ const Index = () => {
           <section>
             <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
               <span className="h-6 w-6 rounded-full bg-navy text-primary-foreground flex items-center justify-center text-xs font-bold">2</span>
-              Informe seu endereço
+              Informe o endereço
             </h3>
             <AddressForm
               locations={locations}

@@ -38,8 +38,25 @@ export function ResultsList({ results, isLoading, error }: ResultsListProps) {
     );
   }
 
-  if (results.length === 0) {
-    return null;
+  if (results.length === 0 && !isLoading && !error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Navigation className="h-5 w-5 text-muted-foreground" />
+            Nenhum prestador encontrado
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center py-6">
+          <p className="text-muted-foreground mb-2">
+            Não foi localizado nenhum prestador dentro do raio de 40km.
+          </p>
+          <p className="text-sm text-emerald font-medium">
+            Mas não se preocupe! É possível solicitar um credenciamento à CONNAPA.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
