@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { brazilianStates } from '@/lib/states';
 import { geocodeAddress } from '@/lib/geocoding';
-import { calculateDistance, formatDistance } from '@/lib/haversine';
+import { calculateRoutes, type RouteResult } from '@/lib/routing';
 import type { LocationData } from '@/lib/spreadsheet';
 
 const addressSchema = z.object({
@@ -40,6 +40,8 @@ export interface SearchResult {
   name: string;
   distance: number;
   formattedDistance: string;
+  durationMinutes?: number;
+  formattedDuration?: string;
 }
 
 interface AddressFormProps {
@@ -89,30 +91,27 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
         return;
       }
 
-      // Calculate distances to all locations
-      const locationsWithDistance = locations.map(location => ({
-        name: location.name,
-        distance: calculateDistance(
-          coords.lat,
-          coords.lon,
-          location.latitude,
-          location.longitude
-        ),
-      }));
+      // Calculate real route distances using OSRM
+      const routeResults = await calculateRoutes(
+        coords.lat,
+        coords.lon,
+        locations
+      );
 
-      // Sort by distance and get top 3
-      const sortedLocations = locationsWithDistance
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, 3)
-        .map(loc => ({
-          ...loc,
-          formattedDistance: formatDistance(loc.distance),
-        }));
+      // Map to SearchResult format
+      const sortedLocations = routeResults.map((route: RouteResult) => ({
+        name: route.name,
+        distance: route.distanceKm,
+        formattedDistance: route.formattedDistance,
+        durationMinutes: route.durationMinutes,
+        formattedDuration: route.formattedDuration,
+      }));
 
       onResults(sortedLocations);
     } catch (error) {
       console.error('Search error:', error);
-      onError('Ocorreu um erro ao buscar os locais. Por favor, tente novamente.');
+      const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro ao buscar os locais. Por favor, tente novamente.';
+      onError(errorMessage);
     } finally {
       setIsSearching(false);
     }

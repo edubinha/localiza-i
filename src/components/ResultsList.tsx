@@ -1,4 +1,4 @@
-import { MapPin, Navigation } from 'lucide-react';
+import { MapPin, Navigation, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { SearchResult } from '@/components/AddressForm';
 
@@ -18,7 +18,7 @@ export function ResultsList({ results, isLoading, error }: ResultsListProps) {
         <CardContent>
           <div className="flex flex-col items-center py-8">
             <div className="h-12 w-12 rounded-full border-4 border-muted border-t-navy animate-spin mb-4" />
-            <p className="text-muted-foreground">Calculando distâncias...</p>
+            <p className="text-muted-foreground">Calculando rotas...</p>
           </div>
         </CardContent>
       </Card>
@@ -61,14 +61,24 @@ export function ResultsList({ results, isLoading, error }: ResultsListProps) {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-foreground truncate">{result.name}</h3>
-              <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4 text-emerald" />
-                <span className="font-medium text-emerald">{result.formattedDistance}</span>
-                <span>de distância</span>
+              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4 text-emerald" />
+                  <span className="font-medium text-emerald">{result.formattedDistance}</span>
+                </div>
+                {result.formattedDuration && (
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4 text-navy" />
+                    <span className="font-medium text-navy">{result.formattedDuration}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         ))}
+        <p className="text-xs text-muted-foreground text-center pt-2">
+          Distância e tempo estimados por rota de carro
+        </p>
       </CardContent>
     </Card>
   );
