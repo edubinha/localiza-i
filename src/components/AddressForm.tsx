@@ -98,14 +98,17 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
         locations
       );
 
-      // Map to SearchResult format
-      const sortedLocations = routeResults.map((route: RouteResult) => ({
-        name: route.name,
-        distance: route.distanceKm,
-        formattedDistance: route.formattedDistance,
-        durationMinutes: route.durationMinutes,
-        formattedDuration: route.formattedDuration,
-      }));
+      // Map to SearchResult format and filter locations > 40km
+      const MAX_DISTANCE_KM = 40;
+      const sortedLocations = routeResults
+        .map((route: RouteResult) => ({
+          name: route.name,
+          distance: route.distanceKm,
+          formattedDistance: route.formattedDistance,
+          durationMinutes: route.durationMinutes,
+          formattedDuration: route.formattedDuration,
+        }))
+        .filter((location) => location.distance <= MAX_DISTANCE_KM);
 
       onResults(sortedLocations);
     } catch (error) {
@@ -122,7 +125,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Informe seu endereço</CardTitle>
+        <CardTitle className="text-lg">Informe o endereço</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
