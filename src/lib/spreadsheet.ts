@@ -4,6 +4,11 @@ export interface LocationData {
   name: string;
   latitude: number;
   longitude: number;
+  address?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
 }
 
 export interface ParseResult {
@@ -59,6 +64,11 @@ export function parseSpreadsheet(file: File): Promise<ParseResult> {
         const nameColIndex = findColumn(headers, ['nome do local', 'nome', 'local', 'name']);
         const latColIndex = findColumn(headers, ['latitude', 'lat']);
         const lonColIndex = findColumn(headers, ['longitude', 'lon', 'long', 'lng']);
+        const addressColIndex = findColumn(headers, ['endereço', 'endereco', 'address', 'rua']);
+        const numberColIndex = findColumn(headers, ['número', 'numero', 'number', 'num']);
+        const neighborhoodColIndex = findColumn(headers, ['bairro', 'neighborhood']);
+        const cityColIndex = findColumn(headers, ['cidade', 'city']);
+        const stateColIndex = findColumn(headers, ['uf', 'estado', 'state']);
 
         if (nameColIndex === -1 || latColIndex === -1 || lonColIndex === -1) {
           resolve({
@@ -100,7 +110,23 @@ export function parseSpreadsheet(file: File): Promise<ParseResult> {
             continue;
           }
 
-          locations.push({ name, latitude, longitude });
+          // Extract optional address fields
+          const address = addressColIndex !== -1 ? String(row[addressColIndex] || '').trim() : undefined;
+          const number = numberColIndex !== -1 ? String(row[numberColIndex] || '').trim() : undefined;
+          const neighborhood = neighborhoodColIndex !== -1 ? String(row[neighborhoodColIndex] || '').trim() : undefined;
+          const city = cityColIndex !== -1 ? String(row[cityColIndex] || '').trim() : undefined;
+          const state = stateColIndex !== -1 ? String(row[stateColIndex] || '').trim() : undefined;
+
+          locations.push({ 
+            name, 
+            latitude, 
+            longitude,
+            address: address || undefined,
+            number: number || undefined,
+            neighborhood: neighborhood || undefined,
+            city: city || undefined,
+            state: state || undefined,
+          });
         }
 
         if (locations.length === 0) {

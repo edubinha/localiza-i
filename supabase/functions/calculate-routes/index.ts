@@ -10,6 +10,11 @@ interface Location {
   name: string;
   latitude: number;
   longitude: number;
+  address?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
 }
 
 interface RouteRequest {
@@ -22,6 +27,11 @@ interface RouteResult {
   name: string;
   distanceKm: number;
   durationMinutes: number;
+  address?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
 }
 
 async function getRouteDistance(
@@ -96,6 +106,11 @@ serve(async (req) => {
           name: location.name,
           distanceKm: route.distanceKm,
           durationMinutes: route.durationMinutes,
+          address: location.address,
+          number: location.number,
+          neighborhood: location.neighborhood,
+          city: location.city,
+          state: location.state,
         };
       }
 
@@ -106,12 +121,13 @@ serve(async (req) => {
     const results = await Promise.all(routePromises);
 
     // Filter out failed routes and sort by distance
-    const validResults = results
-      .filter((r): r is RouteResult => r !== null)
-      .sort((a, b) => a.distanceKm - b.distanceKm)
-      .slice(0, 3); // Top 3 closest
+    const validResults: RouteResult[] = results
+      .filter((r) => r !== null) as RouteResult[];
+    
+    validResults.sort((a, b) => a.distanceKm - b.distanceKm);
+    const topResults = validResults.slice(0, 3); // Top 3 closest
 
-    return new Response(JSON.stringify({ routes: validResults }), {
+    return new Response(JSON.stringify({ routes: topResults }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

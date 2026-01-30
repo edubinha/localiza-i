@@ -7,6 +7,11 @@ export interface RouteResult {
   durationMinutes: number;
   formattedDistance: string;
   formattedDuration: string;
+  address?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
 }
 
 export async function calculateRoutes(
@@ -31,7 +36,16 @@ export async function calculateRoutes(
     throw new Error("Resposta inválida do servidor.");
   }
 
-  return data.routes.map((route: { name: string; distanceKm: number; durationMinutes: number }) => ({
+  return data.routes.map((route: { 
+    name: string; 
+    distanceKm: number; 
+    durationMinutes: number;
+    address?: string;
+    number?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+  }) => ({
     ...route,
     formattedDistance: formatDistance(route.distanceKm),
     formattedDuration: formatDuration(route.durationMinutes),

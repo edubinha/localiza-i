@@ -10,12 +10,14 @@ const Index = () => {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const handleDataLoaded = (data: LocationData[]) => {
     setLocations(data);
     // Clear previous results when new data is loaded
     setResults([]);
     setSearchError(null);
+    setHasSearched(false);
   };
 
   const handleSearchStart = () => {
@@ -28,6 +30,7 @@ const Index = () => {
     setResults(newResults);
     setIsSearching(false);
     setSearchError(null);
+    setHasSearched(true);
   };
 
   const handleError = (error: string) => {
@@ -79,7 +82,7 @@ const Index = () => {
           </section>
 
           {/* Results */}
-          {(results.length > 0 || isSearching || searchError) && (
+          {(hasSearched || isSearching || searchError) && (
             <section>
               <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                 <span className="h-6 w-6 rounded-full bg-emerald text-primary-foreground flex items-center justify-center text-xs font-bold">3</span>
