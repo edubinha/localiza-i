@@ -43,6 +43,11 @@ export interface SearchResult {
   durationMinutes?: number;
   formattedDuration?: string;
   searchInfo?: string; // Info about what search strategy was used
+  address?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
 }
 
 interface AddressFormProps {
@@ -109,6 +114,11 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
           durationMinutes: route.durationMinutes,
           formattedDuration: route.formattedDuration,
           searchInfo: coords.searchUsed !== 'endereço completo' ? coords.searchUsed : undefined,
+          address: route.address,
+          number: route.number,
+          neighborhood: route.neighborhood,
+          city: route.city,
+          state: route.state,
         }))
         .filter((location) => location.distance <= MAX_DISTANCE_KM);
 
