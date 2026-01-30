@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +42,7 @@ export interface SearchResult {
   formattedDistance: string;
   durationMinutes?: number;
   formattedDuration?: string;
+  searchInfo?: string; // Info about what search strategy was used
 }
 
 interface AddressFormProps {
@@ -107,6 +108,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
           formattedDistance: route.formattedDistance,
           durationMinutes: route.durationMinutes,
           formattedDuration: route.formattedDuration,
+          searchInfo: coords.searchUsed !== 'endereço completo' ? coords.searchUsed : undefined,
         }))
         .filter((location) => location.distance <= MAX_DISTANCE_KM);
 

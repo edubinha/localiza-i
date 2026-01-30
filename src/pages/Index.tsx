@@ -98,7 +98,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border bg-background mt-auto">
         <div className="container mx-auto px-4 py-4 text-center text-sm text-muted-foreground">
-          <p>LocalizAI © {new Date().getFullYear()} — Encontre locais de exame ocupacional próximos a você</p>
+          <p>LocalizAI © 2026</p>
         </div>
       </footer>
     </div>

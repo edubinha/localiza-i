@@ -1,4 +1,4 @@
-import { MapPin, Navigation, Clock } from 'lucide-react';
+import { MapPin, Navigation, Clock, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { SearchResult } from '@/components/AddressForm';
 
@@ -59,6 +59,9 @@ export function ResultsList({ results, isLoading, error }: ResultsListProps) {
     );
   }
 
+  // Check if any result used fallback search
+  const searchInfo = results.find(r => r.searchInfo)?.searchInfo;
+
   return (
     <Card>
       <CardHeader>
@@ -68,6 +71,12 @@ export function ResultsList({ results, isLoading, error }: ResultsListProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        {searchInfo && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+            <Info className="h-4 w-4 flex-shrink-0" />
+            <span>Busca realizada utilizando: <strong>{searchInfo}</strong></span>
+          </div>
+        )}
         {results.map((result, index) => (
           <div
             key={`${result.name}-${index}`}
