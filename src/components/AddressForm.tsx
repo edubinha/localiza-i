@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Search, Loader2, Info } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,18 @@ import { geocodeAddress } from '@/lib/geocoding';
 import { calculateRoutes, type RouteResult } from '@/lib/routing';
 import type { LocationData } from '@/lib/spreadsheet';
 
+interface ViaCepResponse {
+  cep: string;
+  logradouro: string;
+  complemento: string;
+  bairro: string;
+  localidade: string;
+  uf: string;
+  erro?: boolean;
+}
+
 const addressSchema = z.object({
+  cep: z.string().optional(),
   street: z.string().min(3, 'Endereço deve ter pelo menos 3 caracteres'),
   number: z.string().min(1, 'Número é obrigatório'),
   neighborhood: z.string().min(2, 'Bairro deve ter pelo menos 2 caracteres'),
@@ -42,7 +53,7 @@ export interface SearchResult {
   formattedDistance: string;
   durationMinutes?: number;
   formattedDuration?: string;
-  searchInfo?: string; // Info about what search strategy was used
+  searchInfo?: string;
   address?: string;
   number?: string;
   neighborhood?: string;
@@ -59,10 +70,13 @@ interface AddressFormProps {
 
 export function AddressForm({ locations, onResults, onError, onSearchStart }: AddressFormProps) {
   const [isSearching, setIsSearching] = useState(false);
+  const [isFetchingCep, setIsFetchingCep] = useState(false);
+  const [cepError, setCepError] = useState<string | null>(null);
 
   const form = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
     defaultValues: {
+      cep: '',
       street: '',
       number: '',
       neighborhood: '',
@@ -70,6 +84,64 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
       state: '',
     },
   });
+
+  const fetchAddressByCep = useCallback(async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    
+    if (cleanCep.length !== 8) {
+      return;
+    }
+
+    setIsFetchingCep(true);
+    setCepError(null);
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data: ViaCepResponse = await response.json();
+
+      if (data.erro) {
+        setCepError('CEP não encontrado. Preencha o endereço manualmente.');
+        return;
+      }
+
+      // Auto-fill the form fields
+      form.setValue('street', data.logradouro || '');
+      form.setValue('neighborhood', data.bairro || '');
+      form.setValue('city', data.localidade || '');
+      
+      // Find the state value that matches the UF
+      const stateMatch = brazilianStates.find(s => s.value === data.uf);
+      if (stateMatch) {
+        form.setValue('state', stateMatch.value);
+      }
+
+      setCepError(null);
+    } catch (error) {
+      console.error('Error fetching CEP:', error);
+      setCepError('Erro ao buscar CEP. Preencha o endereço manualmente.');
+    } finally {
+      setIsFetchingCep(false);
+    }
+  }, [form]);
+
+  const handleCepChange = useCallback((value: string) => {
+    // Format CEP as user types (00000-000)
+    const cleanValue = value.replace(/\D/g, '');
+    let formattedValue = cleanValue;
+    
+    if (cleanValue.length > 5) {
+      formattedValue = `${cleanValue.slice(0, 5)}-${cleanValue.slice(5, 8)}`;
+    }
+    
+    form.setValue('cep', formattedValue);
+    
+    // Trigger API call when CEP is complete
+    if (cleanValue.length === 8) {
+      fetchAddressByCep(cleanValue);
+    } else {
+      setCepError(null);
+    }
+  }, [form, fetchAddressByCep]);
 
   const onSubmit = async (data: AddressFormData) => {
     if (locations.length === 0) {
@@ -143,24 +215,37 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* CEP Field - First field */}
               <FormField
                 control={form.control}
-                name="street"
+                name="cep"
                 render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Endereço (Rua/Avenida)</FormLabel>
+                  <FormItem>
+                    <FormLabel>CEP</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="Ex: Rua das Flores" 
-                        {...field} 
-                        disabled={isDisabled}
-                      />
+                      <div className="relative">
+                        <Input 
+                          placeholder="00000-000" 
+                          {...field}
+                          onChange={(e) => handleCepChange(e.target.value)}
+                          maxLength={9}
+                          disabled={isDisabled}
+                          className={cepError ? 'border-destructive' : ''}
+                        />
+                        {isFetchingCep && (
+                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                      </div>
                     </FormControl>
+                    {cepError && (
+                      <p className="text-sm text-destructive">{cepError}</p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+              {/* Number Field - Second field, same row as CEP */}
               <FormField
                 control={form.control}
                 name="number"
@@ -179,6 +264,26 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                 )}
               />
 
+              {/* Street Field - Full width */}
+              <FormField
+                control={form.control}
+                name="street"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Endereço (Rua/Avenida)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: Rua das Flores" 
+                        {...field} 
+                        disabled={isDisabled}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Neighborhood Field */}
               <FormField
                 control={form.control}
                 name="neighborhood"
