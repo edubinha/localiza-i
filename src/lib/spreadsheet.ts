@@ -71,6 +71,7 @@ function parseRows(jsonData: unknown[][]): ParseResult {
   const neighborhoodColIndex = findColumn(headers, ['bairro', 'neighborhood']);
   const cityColIndex = findColumn(headers, ['cidade', 'city']);
   const stateColIndex = findColumn(headers, ['uf', 'estado', 'state']);
+  const statusColIndex = findColumn(headers, ['situação', 'situacao', 'status']);
 
   if (nameColIndex === -1 || latColIndex === -1 || lonColIndex === -1) {
     return {
@@ -88,6 +89,17 @@ function parseRows(jsonData: unknown[][]): ParseResult {
     const row = jsonData[i] as unknown[];
 
     if (!row || row.length === 0) continue;
+
+    // Check status column - skip inactive locations silently
+    if (statusColIndex !== -1) {
+      const statusValue = String(row[statusColIndex] || '').trim().toLowerCase();
+      const normalizedStatus = statusValue.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      
+      // Only include locations with "ativo" status
+      if (normalizedStatus !== 'ativo') {
+        continue;
+      }
+    }
 
     const name = String(row[nameColIndex] || '').trim();
     const latValue = row[latColIndex];
