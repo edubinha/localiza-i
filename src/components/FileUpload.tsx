@@ -1,8 +1,8 @@
-import { useState, useRef, type ChangeEvent } from 'react';
+import { useState, useRef, useEffect, type ChangeEvent } from 'react';
 import { Upload, FileSpreadsheet, Check, AlertCircle, X, Cloud } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { parseSpreadsheet, parseSpreadsheetText, type LocationData } from '@/lib/spreadsheet';
+import { parseSpreadsheet, parseSpreadsheetText, extractSheetName, type LocationData } from '@/lib/spreadsheet';
 
 interface FileUploadProps {
   onDataLoaded: (data: LocationData[]) => void;
@@ -11,12 +11,38 @@ interface FileUploadProps {
 
 const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT669HNj9Xp01XeXIonmyAayOWIPlN_VsBl5sQpcXOL1NotshQp5s4kYN1x0gtypa_XqShZS8vgesAU/pub?gid=0&single=true&output=csv';
 
+const DEFAULT_SHEET_NAME = 'Planilha CONNAPA';
+
 export function FileUpload({ onDataLoaded, locationsCount }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingName, setIsFetchingName] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [sheetName, setSheetName] = useState<string>(DEFAULT_SHEET_NAME);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch sheet name on mount
+  useEffect(() => {
+    const fetchSheetName = async () => {
+      try {
+        const response = await fetch(GOOGLE_SHEET_CSV_URL);
+        if (response.ok) {
+          const csvText = await response.text();
+          const name = extractSheetName(csvText);
+          if (name) {
+            setSheetName(name);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching sheet name:', err);
+      } finally {
+        setIsFetchingName(false);
+      }
+    };
+    
+    fetchSheetName();
+  }, []);
 
   const handleLoadFromGoogleSheets = async () => {
     setIsLoading(true);
@@ -30,9 +56,14 @@ export function FileUpload({ onDataLoaded, locationsCount }: FileUploadProps) {
       }
       const csvText = await response.text();
 
-      const result = parseSpreadsheetText(csvText);
+      const result = parseSpreadsheetText(csvText, true); // true = has name row
       if (result.success) {
-        setFileName('Prestadores CONNAPA - Atualizado');
+        // Use the extracted name from the sheet, or fallback to the state
+        const displayName = result.sheetName || sheetName;
+        setFileName(displayName);
+        if (result.sheetName) {
+          setSheetName(result.sheetName); // Update state with latest name
+        }
         onDataLoaded(result.data);
         if (result.error) setError(result.error);
       } else {
@@ -183,10 +214,13 @@ export function FileUpload({ onDataLoaded, locationsCount }: FileUploadProps) {
             <button
               type="button"
               onClick={handleLoadFromGoogleSheets}
-              className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md transition-colors mx-auto"
+              disabled={isFetchingName}
+              className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md transition-colors mx-auto disabled:opacity-50"
             >
               <Cloud className="h-4 w-4 text-emerald" />
-              <span className="text-sm font-medium">Prestadores CONNAPA - Atualizado</span>
+              <span className="text-sm font-medium">
+                {isFetchingName ? 'Carregando...' : sheetName}
+              </span>
             </button>
           </div>
         )}

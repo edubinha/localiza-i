@@ -17,6 +17,7 @@ export interface ParseResult {
   success: boolean;
   data: LocationData[];
   error?: string;
+  sheetName?: string;
 }
 
 function normalizeColumnName(name: string): string {
@@ -149,9 +150,37 @@ function parseRows(jsonData: unknown[][]): ParseResult {
   };
 }
 
-export function parseSpreadsheetText(csvText: string): ParseResult {
+/**
+ * Extracts the sheet name from the first line (cell A1) of CSV text.
+ * This is a lightweight function for fetching just the name without parsing all data.
+ */
+export function extractSheetName(csvText: string): string | null {
   try {
     const rows = parseCSV(csvText);
+    if (rows.length > 0 && rows[0].length > 0) {
+      const name = String(rows[0][0]).trim();
+      return name || null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function parseSpreadsheetText(csvText: string, hasNameRow: boolean = false): ParseResult {
+  try {
+    const rows = parseCSV(csvText);
+    
+    if (hasNameRow) {
+      // Extract name from first row (A1), then parse data starting from row 2
+      const sheetName = rows.length > 0 && rows[0].length > 0 
+        ? String(rows[0][0]).trim() 
+        : undefined;
+      const dataRows = rows.slice(1); // Skip the name row
+      const result = parseRows(dataRows as unknown[][]);
+      return { ...result, sheetName };
+    }
+    
     return parseRows(rows as unknown[][]);
   } catch (error) {
     console.error('Parse error:', error);
