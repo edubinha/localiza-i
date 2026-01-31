@@ -1,78 +1,100 @@
 
+# Plano: Otimização do Teclado Mobile para Campos CEP e Número
 
-# Plano: Correção de Erros no Cálculo de Rotas
+## Objetivo
 
-## Problema Identificado
-
-A aplicação está falhando ao calcular rotas devido a um **problema de CORS (Cross-Origin Resource Sharing)**. A Edge Function está rejeitando requisições vindas do domínio de preview da aplicação.
-
----
-
-## Diagnóstico Detalhado
-
-### Causa Raiz do Erro Principal
-
-| Aspecto | Valor Atual | Problema |
-|---------|-------------|----------|
-| Origem da requisição | `https://...lovableproject.com` | Domínio de desenvolvimento |
-| Origens permitidas no CORS | `.lovable.app`, `localhost` | Não inclui `.lovableproject.com` |
-| Resultado | Requisição bloqueada pelo navegador | Erro "Failed to fetch" |
-
-A verificação CORS atual usa `origin.endsWith('.lovable.app')`, mas o domínio de preview é `.lovableproject.com`.
-
-### Problema Secundário (Warning no Console)
-
-O componente `ResultsList` está recebendo uma ref mas não é um componente que suporta refs (não usa `forwardRef`). Isso causa um warning no console.
+Melhorar a experiência de preenchimento no celular configurando os teclados virtuais adequados para cada campo.
 
 ---
 
-## Alterações Planejadas
+## Comportamentos Desejados
 
-### 1. Corrigir CORS na Edge Function
+| Campo | Teclado Inicial | Permite Letras? |
+|-------|-----------------|-----------------|
+| CEP | Numérico | Não |
+| Número | Numérico | Sim (usuário pode alternar) |
 
-**Arquivo:** `supabase/functions/calculate-routes/index.ts`
+---
 
-Atualizar a verificação de origens permitidas para incluir tanto `.lovable.app` quanto `.lovableproject.com`:
+## Solução Técnica
 
-```text
-Antes:
-  origin.endsWith('.lovable.app')
+Utilizaremos atributos HTML5 que controlam o comportamento do teclado virtual em dispositivos móveis:
 
-Depois:
-  origin.endsWith('.lovable.app') || origin.endsWith('.lovableproject.com')
+- **`inputMode`**: Define qual tipo de teclado virtual o navegador deve exibir
+- **`pattern`**: Define um padrão de validação (também influencia alguns navegadores)
+
+### Valores do inputMode
+
+| Valor | Comportamento |
+|-------|---------------|
+| `numeric` | Teclado numérico (0-9), usuário pode alternar |
+| `tel` | Teclado telefônico (mais restritivo em alguns dispositivos) |
+| `text` | Teclado alfanumérico padrão |
+
+---
+
+## Alterações no Código
+
+**Arquivo:** `src/components/AddressForm.tsx`
+
+### Campo CEP (linhas 249-256)
+
+Adicionar `inputMode="numeric"` e `pattern="[0-9]*"` para garantir apenas números:
+
+```tsx
+<Input 
+  placeholder="00000-000" 
+  {...field}
+  onChange={(e) => handleCepChange(e.target.value)}
+  maxLength={9}
+  disabled={isDisabled}
+  inputMode="numeric"
+  pattern="[0-9]*"
+  className={cepError ? 'border-destructive pr-10' : 'pr-10'}
+/>
 ```
 
-### 2. Corrigir Warning de Ref no ResultsList
+### Campo Número (linhas 280-284)
 
-**Arquivo:** `src/components/ResultsList.tsx`
+Adicionar `inputMode="numeric"` para mostrar teclado numérico por padrão, mas permitindo alternância:
 
-Atualizar o componente para usar `forwardRef` e evitar o warning do React:
-
-```text
-Antes:
-  export function ResultsList({ results, isLoading, error }: ResultsListProps) { ... }
-
-Depois:
-  export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
-    function ResultsList({ results, isLoading, error }, ref) { ... }
-  );
+```tsx
+<Input 
+  placeholder="Ex: 123" 
+  {...field} 
+  disabled={isDisabled}
+  inputMode="numeric"
+/>
 ```
 
 ---
 
-## Resumo das Alterações
+## Diferença de Comportamento
+
+| Configuração | CEP | Número |
+|--------------|-----|--------|
+| `inputMode` | `numeric` | `numeric` |
+| `pattern` | `[0-9]*` | *(não definido)* |
+| Resultado | Força teclado numérico | Teclado numérico com opção de alternar |
+
+A combinação de `inputMode="numeric"` + `pattern="[0-9]*"` no campo CEP cria uma experiência mais restritiva, ideal para campos que só aceitam números. Já o campo Número usa apenas `inputMode="numeric"`, o que sugere o teclado numérico mas permite ao usuário alternar para o alfanumérico quando necessário (ex: "123A").
+
+---
+
+## Arquivos Modificados
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `supabase/functions/calculate-routes/index.ts` | Adicionar `.lovableproject.com` à lista de origens CORS |
-| `src/components/ResultsList.tsx` | Converter para `forwardRef` |
+| `src/components/AddressForm.tsx` | Adicionar atributos `inputMode` e `pattern` nos campos CEP e Número |
 
 ---
 
-## Resultado Esperado
+## Compatibilidade
 
-Após as correções:
-- As requisições para calcular rotas funcionarão corretamente
-- O warning de ref será eliminado do console
-- A aplicação funcionará tanto em preview (`lovableproject.com`) quanto em produção (`lovable.app`)
+Esta solução funciona em:
+- iOS Safari
+- Chrome Android
+- Samsung Internet
+- Firefox Mobile
 
+Não afeta o comportamento em desktop (os atributos são ignorados quando não há teclado virtual).
