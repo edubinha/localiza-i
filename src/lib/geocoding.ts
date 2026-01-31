@@ -6,10 +6,29 @@ export interface GeocodingResult {
   searchUsed: string; // Describes what search strategy was used
 }
 
+interface NominatimAddress {
+  suburb?: string;
+  neighbourhood?: string;
+  city?: string;
+  town?: string;
+  municipality?: string;
+  state?: string;
+  country?: string;
+}
+
 interface NominatimResponse {
   lat: string;
   lon: string;
   display_name: string;
+  address?: NominatimAddress;
+}
+
+// Normalize strings for comparison (remove accents, lowercase)
+function normalizeString(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 // Simple in-memory cache for geocoding results
@@ -83,11 +102,12 @@ async function tryStructuredGeocode(params: {
 /**
  * Free-text geocoding as a fallback option.
  * Used only when structured queries fail.
+ * Uses addressdetails=1 for structured validation of city/state.
  */
 async function tryFreeTextGeocode(query: string, city?: string, state?: string): Promise<{ lat: number; lon: number } | null> {
   try {
     const encodedQuery = encodeURIComponent(query);
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&countrycodes=br&limit=5`;
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&countrycodes=br&limit=5&addressdetails=1`;
 
     const response = await fetch(url, {
       headers: {
@@ -105,21 +125,33 @@ async function tryFreeTextGeocode(query: string, city?: string, state?: string):
       return null;
     }
 
-    // If we have city/state context, validate results
+    // If we have city/state context, validate using structured address fields
     if (city && state) {
-      const cityLower = city.toLowerCase();
-      const stateLower = state.toLowerCase();
+      const normalizedCity = normalizeString(city);
+      const normalizedState = normalizeString(state);
 
       for (const result of data) {
-        const displayLower = result.display_name.toLowerCase();
-        if (displayLower.includes(cityLower) && displayLower.includes(stateLower)) {
-          return {
-            lat: parseFloat(result.lat),
-            lon: parseFloat(result.lon),
-          };
+        if (!result.address) continue;
+
+        // Nominatim uses different fields for city depending on location type
+        const resultCity = result.address.city || 
+                           result.address.town || 
+                           result.address.municipality;
+        const resultState = result.address.state;
+
+        if (resultCity && resultState) {
+          const cityMatch = normalizeString(resultCity) === normalizedCity;
+          const stateMatch = normalizeString(resultState).includes(normalizedState);
+
+          if (cityMatch && stateMatch) {
+            return {
+              lat: parseFloat(result.lat),
+              lon: parseFloat(result.lon),
+            };
+          }
         }
       }
-      // No result matched the expected city/state
+      // No result matched the expected city/state with structured validation
       return null;
     }
 
