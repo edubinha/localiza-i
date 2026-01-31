@@ -1,6 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { LocationData } from "./spreadsheet";
 import { devLog } from "./logger";
+import { calculateDistance } from "./haversine";
+
+// Maximum straight-line distance for pre-filtering (km)
+const MAX_HAVERSINE_DISTANCE_KM = 60;
 
 export interface RouteResult {
   name: string;
@@ -20,11 +24,29 @@ export async function calculateRoutes(
   originLon: number,
   locations: LocationData[]
 ): Promise<RouteResult[]> {
+  // Pre-filter locations using Haversine distance to reduce payload
+  const nearbyLocations = locations
+    .filter(loc => {
+      if (loc.latitude === undefined || loc.longitude === undefined) return false;
+      const distance = calculateDistance(
+        originLat,
+        originLon,
+        loc.latitude,
+        loc.longitude
+      );
+      return distance <= MAX_HAVERSINE_DISTANCE_KM;
+    })
+    .slice(0, 100); // Ensure we never exceed the limit
+
+  if (nearbyLocations.length === 0) {
+    return []; // No locations within range
+  }
+
   const { data, error } = await supabase.functions.invoke("calculate-routes", {
     body: {
       originLat,
       originLon,
-      locations,
+      locations: nearbyLocations,
     },
   });
 
