@@ -208,8 +208,29 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-lg">Informe o endereço</CardTitle>
+        <Button 
+          type="button" 
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            form.reset({
+              cep: '',
+              street: '',
+              number: '',
+              neighborhood: '',
+              city: '',
+              state: '',
+            });
+            setCepError(null);
+          }}
+          disabled={isDisabled || isSearching}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <Eraser className="h-4 w-4 mr-1" />
+          Limpar
+        </Button>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -328,7 +349,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                     <FormLabel>Estado</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
-                      defaultValue={field.value}
+                      value={field.value}
                       disabled={isDisabled}
                     >
                       <FormControl>
@@ -350,37 +371,23 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
               />
             </div>
 
-            <div className="flex gap-2">
-              <Button 
-                type="submit" 
-                className="flex-1 bg-navy hover:bg-navy/90" 
-                disabled={isDisabled || isSearching}
-              >
-                {isSearching ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Buscando...
-                  </>
-                ) : (
-                  <>
-                    <Search className="h-4 w-4" />
-                    Buscar Prestadores
-                  </>
-                )}
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline"
-                onClick={() => {
-                  form.reset();
-                  setCepError(null);
-                }}
-                disabled={isDisabled || isSearching}
-              >
-                <Eraser className="h-4 w-4 mr-1" />
-                Limpar
-              </Button>
-            </div>
+            <Button 
+              type="submit" 
+              className="w-full bg-navy hover:bg-navy/90" 
+              disabled={isDisabled || isSearching}
+            >
+              {isSearching ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Buscando...
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4" />
+                  Buscar Prestadores
+                </>
+              )}
+            </Button>
 
             {isDisabled && (
               <p className="text-sm text-muted-foreground text-center">
