@@ -84,8 +84,11 @@ export function FileUpload({ onDataLoaded, locationsCount }: FileUploadProps) {
 
         const parseCoordinate = (value: unknown): number => {
           if (typeof value === 'number') return value;
-          // Normaliza vírgula para ponto (formato brasileiro)
-          const normalized = String(value).replace(',', '.');
+          // Remove aspas e normaliza vírgula para ponto (formato brasileiro)
+          const normalized = String(value)
+            .replace(/^["']|["']$/g, '') // Remove aspas no início/fim
+            .trim()
+            .replace(',', '.');
           return parseFloat(normalized);
         };
 
