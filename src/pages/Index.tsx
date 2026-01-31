@@ -48,7 +48,7 @@ const Index = () => {
           {/* Introduction */}
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-foreground mb-2">
-              Encontre o local mais próximo para exames de seu colaborador
+              Encontre o local mais próximo para seu exame ou de seu colaborador!
             </h2>
             <p className="text-muted-foreground">
               Importe sua planilha de prestadores e busque os mais próximos do endereço informado.

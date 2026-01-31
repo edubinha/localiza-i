@@ -244,17 +244,19 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                   <FormItem>
                     <FormLabel>CEP</FormLabel>
                     <FormControl>
-                      <div className="relative">
+                      <div className="relative flex items-center">
                         <Input 
                           placeholder="00000-000" 
                           {...field}
                           onChange={(e) => handleCepChange(e.target.value)}
                           maxLength={9}
                           disabled={isDisabled}
-                          className={cepError ? 'border-destructive' : ''}
+                          className={cepError ? 'border-destructive pr-10' : 'pr-10'}
                         />
                         {isFetchingCep && (
-                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                          <div className="absolute right-3 flex items-center justify-center">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          </div>
                         )}
                       </div>
                     </FormControl>
