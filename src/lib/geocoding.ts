@@ -185,22 +185,36 @@ export async function geocodeAddress(
   let result: { lat: number; lon: number } | null = null;
   let searchUsed = '';
 
-  // Strategy 1: Structured search with street + number
+  // Strategy 1 & 2: Run in parallel when we have street and number
+  // This saves ~500ms by not waiting for strategy 1 to fail before trying 2
   if (street && number) {
     const streetWithNumber = `${number} ${street}`;
-    result = await tryStructuredGeocode({
-      street: streetWithNumber,
-      city,
-      state,
-      country: 'Brasil',
-    });
-    if (result) {
-      searchUsed = 'endereço completo (estruturado)';
-    }
-  }
+    
+    const [fullAddressResult, streetOnlyResult] = await Promise.all([
+      tryStructuredGeocode({
+        street: streetWithNumber,
+        city,
+        state,
+        country: 'Brasil',
+      }),
+      tryStructuredGeocode({
+        street,
+        city,
+        state,
+        country: 'Brasil',
+      }),
+    ]);
 
-  // Strategy 2: Structured search with street only (no number)
-  if (!result && street) {
+    // Prefer full address result if available
+    if (fullAddressResult) {
+      result = fullAddressResult;
+      searchUsed = 'endereço completo (estruturado)';
+    } else if (streetOnlyResult) {
+      result = streetOnlyResult;
+      searchUsed = 'endereço sem número (estruturado)';
+    }
+  } else if (street) {
+    // Only street, no number - just try street
     result = await tryStructuredGeocode({
       street,
       city,
@@ -213,7 +227,6 @@ export async function geocodeAddress(
   }
 
   // Strategy 3: Free-text search for neighborhood
-  // Nominatim finds neighborhoods better with free-text queries (place=suburb/neighbourhood)
   if (!result && neighborhood) {
     const neighborhoodQuery = `${neighborhood}, ${city}, ${state}, Brasil`;
     result = await tryFreeTextGeocode(neighborhoodQuery, city, state);

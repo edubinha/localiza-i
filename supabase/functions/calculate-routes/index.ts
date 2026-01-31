@@ -43,7 +43,7 @@ function calculateHaversineDistance(
 ): number {
   const EARTH_RADIUS_KM = 6371;
   const toRadians = (degrees: number) => degrees * (Math.PI / 180);
-  
+
   const dLat = toRadians(lat2 - lat1);
   const dLon = toRadians(lon2 - lon1);
 
@@ -64,96 +64,132 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Fetch route with retry and exponential backoff
-async function getRouteDistanceWithRetry(
-  originLat: number,
-  originLon: number,
-  destLat: number,
-  destLon: number,
-  maxRetries: number = 3
-): Promise<{ distanceKm: number; durationMinutes: number } | null> {
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      // OSRM uses lon,lat order (not lat,lon)
-      const url = `https://router.project-osrm.org/route/v1/driving/${originLon},${originLat};${destLon},${destLat}?overview=false`;
-
-      const response = await fetch(url, {
-        headers: {
-          "User-Agent": "LocalizAI/1.0",
-        },
-      });
-
-      if (response.status === 429) {
-        // Rate limited - wait with exponential backoff
-        const waitTime = Math.pow(2, attempt) * 1000 + Math.random() * 500;
-        console.log(`Rate limited, waiting ${waitTime}ms before retry ${attempt + 1}/${maxRetries}`);
-        await sleep(waitTime);
-        continue;
-      }
-
-      if (!response.ok) {
-        console.error(`OSRM error: ${response.status}`);
-        return null;
-      }
-
-      const data = await response.json();
-
-      if (data.code !== "Ok" || !data.routes || data.routes.length === 0) {
-        console.error("No route found:", data);
-        return null;
-      }
-
-      const route = data.routes[0];
-      return {
-        distanceKm: route.distance / 1000, // meters to km
-        durationMinutes: route.duration / 60, // seconds to minutes
-      };
-    } catch (error) {
-      console.error(`Error fetching route (attempt ${attempt + 1}):`, error);
-      if (attempt < maxRetries - 1) {
-        await sleep(Math.pow(2, attempt) * 500);
-      }
-    }
-  }
-  return null;
+interface TableAPIResult {
+  distances: (number | null)[];
+  durations: (number | null)[];
 }
 
-// Process locations in batches to avoid rate limiting
-async function processBatch(
+/**
+ * Use OSRM Table API to calculate distances from one origin to multiple destinations
+ * in a single HTTP call. Much more efficient than individual route calls.
+ */
+async function getTableDistances(
+  originLat: number,
+  originLon: number,
+  destinations: { lat: number; lon: number }[]
+): Promise<TableAPIResult | null> {
+  try {
+    // Build coordinates string: origin first, then all destinations
+    // OSRM uses lon,lat order
+    const coords = [
+      `${originLon},${originLat}`,
+      ...destinations.map((d) => `${d.lon},${d.lat}`),
+    ].join(";");
+
+    const url = `https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=distance,duration`;
+
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "LocalizAI/1.0",
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`OSRM Table API error: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (data.code !== "Ok") {
+      console.error("OSRM Table API returned error:", data.code);
+      return null;
+    }
+
+    // distances[0] contains distances from source 0 to all destinations
+    // durations[0] contains durations from source 0 to all destinations
+    const distances = data.distances?.[0]?.slice(1) || []; // Remove first element (origin to origin = 0)
+    const durations = data.durations?.[0]?.slice(1) || [];
+
+    return { distances, durations };
+  } catch (error) {
+    console.error("Table API error:", error);
+    return null;
+  }
+}
+
+/**
+ * Process a batch of locations using the Table API
+ * Falls back to individual requests if Table API fails
+ */
+async function processBatchWithTableAPI(
   batch: Location[],
   originLat: number,
   originLon: number
 ): Promise<(RouteResult | null)[]> {
-  const results: (RouteResult | null)[] = [];
-  
-  for (const location of batch) {
-    const route = await getRouteDistanceWithRetry(
-      originLat,
-      originLon,
-      location.latitude,
-      location.longitude
-    );
+  const destinations = batch.map((loc) => ({
+    lat: loc.latitude,
+    lon: loc.longitude,
+  }));
 
-    if (route) {
-      results.push({
+  const tableResult = await getTableDistances(originLat, originLon, destinations);
+
+  if (tableResult) {
+    // Successfully got results from Table API
+    return batch.map((location, index) => {
+      const distance = tableResult.distances[index];
+      const duration = tableResult.durations[index];
+
+      if (distance === null || duration === null) {
+        return null;
+      }
+
+      return {
         name: location.name,
-        distanceKm: route.distanceKm,
-        durationMinutes: route.durationMinutes,
+        distanceKm: distance / 1000, // meters to km
+        durationMinutes: duration / 60, // seconds to minutes
         address: location.address,
         number: location.number,
         neighborhood: location.neighborhood,
         city: location.city,
         state: location.state,
-      });
-    } else {
-      results.push(null);
-    }
-    
-    // Small delay between requests in a batch
-    await sleep(100);
+      };
+    });
   }
+
+  // Fallback: process in parallel with individual route requests
+  console.log("Table API failed, falling back to parallel individual requests");
   
-  return results;
+  const promises = batch.map(async (location) => {
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${originLon},${originLat};${location.longitude},${location.latitude}?overview=false`;
+
+      const response = await fetch(url, {
+        headers: { "User-Agent": "LocalizAI/1.0" },
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      if (data.code !== "Ok" || !data.routes?.[0]) return null;
+
+      const route = data.routes[0];
+      return {
+        name: location.name,
+        distanceKm: route.distance / 1000,
+        durationMinutes: route.duration / 60,
+        address: location.address,
+        number: location.number,
+        neighborhood: location.neighborhood,
+        city: location.city,
+        state: location.state,
+      };
+    } catch {
+      return null;
+    }
+  });
+
+  return Promise.all(promises);
 }
 
 serve(async (req) => {
@@ -178,7 +214,6 @@ serve(async (req) => {
     console.log(`Processing ${locations.length} locations`);
 
     // Step 1: Pre-filter using Haversine distance (straight-line)
-    // Only keep locations within 60km straight-line distance
     const MAX_HAVERSINE_DISTANCE_KM = 60;
     const locationsWithHaversine = locations
       .map((location) => ({
@@ -193,37 +228,43 @@ serve(async (req) => {
       .filter((loc) => loc.haversineDistance <= MAX_HAVERSINE_DISTANCE_KM)
       .sort((a, b) => a.haversineDistance - b.haversineDistance);
 
-    console.log(`Pre-filtered to ${locationsWithHaversine.length} locations within ${MAX_HAVERSINE_DISTANCE_KM}km straight-line`);
+    console.log(
+      `Pre-filtered to ${locationsWithHaversine.length} locations within ${MAX_HAVERSINE_DISTANCE_KM}km`
+    );
 
-    // Step 2: Take only the closest 20 candidates for route calculation
+    // Step 2: Take only the closest 20 candidates
     const MAX_CANDIDATES = 20;
     const candidates = locationsWithHaversine.slice(0, MAX_CANDIDATES);
 
-    console.log(`Processing ${candidates.length} closest candidates`);
+    console.log(`Processing ${candidates.length} closest candidates with Table API`);
 
-    // Step 3: Process in small batches with delays
-    const BATCH_SIZE = 5;
+    // Step 3: Process in batches using Table API (10 per batch for reliability)
+    const BATCH_SIZE = 10;
     const allResults: (RouteResult | null)[] = [];
 
     for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
       const batch = candidates.slice(i, i + BATCH_SIZE);
-      console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(candidates.length / BATCH_SIZE)}`);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(candidates.length / BATCH_SIZE);
       
-      const batchResults = await processBatch(batch, originLat, originLon);
+      console.log(`Processing batch ${batchNum}/${totalBatches} (${batch.length} locations)`);
+
+      const batchResults = await processBatchWithTableAPI(batch, originLat, originLon);
       allResults.push(...batchResults);
-      
-      // Delay between batches to respect rate limits
+
+      // Reduced delay between batches (200ms instead of 500ms)
       if (i + BATCH_SIZE < candidates.length) {
-        await sleep(500);
+        await sleep(200);
       }
     }
 
     // Filter out failed routes and sort by distance
-    const validResults: RouteResult[] = allResults
-      .filter((r): r is RouteResult => r !== null);
-    
+    const validResults: RouteResult[] = allResults.filter(
+      (r): r is RouteResult => r !== null
+    );
+
     validResults.sort((a, b) => a.distanceKm - b.distanceKm);
-    
+
     console.log(`Returning ${validResults.length} valid routes`);
 
     return new Response(JSON.stringify({ routes: validResults }), {
