@@ -253,7 +253,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                           maxLength={9}
                           disabled={isDisabled}
                           inputMode="numeric"
-                          pattern="[0-9]*"
+                          pattern="[0-9]{5}-?[0-9]{3}"
                           className={cepError ? 'border-destructive pr-10' : 'pr-10'}
                         />
                         {isFetchingCep && (
@@ -283,7 +283,6 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                         placeholder="Ex: 123" 
                         {...field} 
                         disabled={isDisabled}
-                        inputMode="numeric"
                       />
                     </FormControl>
                     <FormMessage />
