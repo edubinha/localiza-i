@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import readXlsxFile from 'read-excel-file';
 import { parseCSV } from './csv';
 
 export interface LocationData {
@@ -204,54 +204,29 @@ export function parseSpreadsheetText(csvText: string, hasNameRow: boolean = fals
   }
 }
 
-export function parseSpreadsheet(file: File): Promise<ParseResult> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
+export async function parseSpreadsheet(file: File): Promise<ParseResult> {
+  try {
+    let jsonData: unknown[][];
 
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result;
-        let jsonData: unknown[][];
-
-        if (file.name.endsWith('.csv')) {
-          // FileReader.readAsText returns a string; parse it with a CSV parser that respects quotes.
-          const csvText = String(data ?? '');
-          const rows = parseCSV(csvText);
-          jsonData = rows as unknown[][];
-        } else {
-          const workbook = XLSX.read(data, { type: 'array', codepage: 65001 });
-
-          // Get first sheet
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-
-          // Convert to JSON with raw array output
-          jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        }
-
-        resolve(parseRows(jsonData));
-      } catch (error) {
-        console.error('Parse error:', error);
-        resolve({
-          success: false,
-          data: [],
-          error: 'Erro ao processar a planilha. Verifique se o arquivo é um CSV ou Excel válido.',
-        });
-      }
-    };
-
-    reader.onerror = () => {
-      resolve({
-        success: false,
-        data: [],
-        error: 'Erro ao ler o arquivo.',
-      });
-    };
-
-    if (file.name.endsWith('.csv')) {
-      reader.readAsText(file, 'UTF-8');
+    if (file.name.toLowerCase().endsWith('.csv')) {
+      // Read CSV as text and parse
+      const csvText = await file.text();
+      const rows = parseCSV(csvText);
+      jsonData = rows as unknown[][];
     } else {
-      reader.readAsArrayBuffer(file);
+      // Use read-excel-file for Excel files (.xlsx, .xls)
+      const rows = await readXlsxFile(file);
+      // Convert Row[] to unknown[][] (each row is already an array of cell values)
+      jsonData = rows as unknown[][];
     }
-  });
+
+    return parseRows(jsonData);
+  } catch (error) {
+    console.error('Parse error:', error);
+    return {
+      success: false,
+      data: [],
+      error: 'Erro ao processar a planilha. Verifique se o arquivo é um CSV ou Excel válido.',
+    };
+  }
 }
