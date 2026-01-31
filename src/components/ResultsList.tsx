@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { MapPin, Navigation, Clock, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, Navigation, Clock, Info, ChevronDown, ChevronUp, FlaskConical } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { SearchResult } from '@/components/AddressForm';
 
 interface ResultsListProps {
@@ -11,8 +12,11 @@ interface ResultsListProps {
 }
 
 function formatLocation(neighborhood?: string, city?: string, state?: string): string {
-  const parts = [neighborhood, city, state].filter(Boolean);
-  return parts.join(', ');
+  const neighborhoodCity = [neighborhood, city].filter(Boolean).join(', ');
+  if (neighborhoodCity && state) {
+    return `${neighborhoodCity} - ${state}`;
+  }
+  return neighborhoodCity || state || '';
 }
 
 function formatFullAddress(address?: string, number?: string, neighborhood?: string, city?: string, state?: string): string {
@@ -141,6 +145,14 @@ export function ResultsList({ results, isLoading, error }: ResultsListProps) {
 
   // Check if any result used fallback search
   const searchInfo = results.find(r => r.searchInfo)?.searchInfo;
+  
+  // Limit to top 3 closest locations
+  const topResults = results.slice(0, 3);
+  
+  // Check if any of the top results is a laboratory
+  const hasLaboratory = topResults.some(r => 
+    r.name.toLowerCase().startsWith('laboratório')
+  );
 
   return (
     <Card>
@@ -157,7 +169,15 @@ export function ResultsList({ results, isLoading, error }: ResultsListProps) {
             <span>Busca realizada utilizando: <strong>{searchInfo}</strong></span>
           </div>
         )}
-        {results.map((result, index) => (
+        {hasLaboratory && (
+          <Alert className="bg-blue-50 border-blue-200">
+            <FlaskConical className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800 text-sm">
+              Este local realiza apenas exames laboratoriais e/ou de imagem.
+            </AlertDescription>
+          </Alert>
+        )}
+        {topResults.map((result, index) => (
           <ResultItem key={`${result.name}-${index}`} result={result} index={index} />
         ))}
         <p className="text-xs text-muted-foreground text-center pt-2">
