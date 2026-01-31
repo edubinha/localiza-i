@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Eraser } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -350,23 +350,37 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
               />
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full bg-navy hover:bg-navy/90" 
-              disabled={isDisabled || isSearching}
-            >
-              {isSearching ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Buscando...
-                </>
-              ) : (
-                <>
-                  <Search className="h-4 w-4" />
-                  Buscar Prestadores
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                type="submit" 
+                className="flex-1 bg-navy hover:bg-navy/90" 
+                disabled={isDisabled || isSearching}
+              >
+                {isSearching ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Buscando...
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-4 w-4" />
+                    Buscar Prestadores
+                  </>
+                )}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => {
+                  form.reset();
+                  setCepError(null);
+                }}
+                disabled={isDisabled || isSearching}
+              >
+                <Eraser className="h-4 w-4 mr-1" />
+                Limpar
+              </Button>
+            </div>
 
             {isDisabled && (
               <p className="text-sm text-muted-foreground text-center">
