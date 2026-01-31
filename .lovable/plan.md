@@ -1,73 +1,129 @@
 
-
-# Plano: Suporte às Colunas "ID" e "Situação"
+# Plano: Otimização de Performance da Busca
 
 ## Objetivo
 
-Adicionar suporte às novas colunas "ID" e "Situação" na planilha, filtrando silenciosamente os locais inativos.
+Acelerar o carregamento dos resultados sem comprometer a estabilidade da aplicação, reduzindo o tempo total de ~4-5 segundos para ~1.5-2 segundos.
 
 ---
 
-## Alterações
+## Gargalos Identificados
 
-### Arquivo: `src/lib/spreadsheet.ts`
+| Componente | Problema | Impacto |
+|------------|----------|---------|
+| Edge Function | Chamadas OSRM sequenciais | ~3.5s de delays |
+| Edge Function | Delays entre requests | Conservador demais |
+| Geocodificação | 5 estratégias sequenciais | ~500ms-2s por busca |
 
-**1. Adicionar mapeamento da coluna "Situação"**
+---
 
-Na função `parseRows`, adicionar busca pela coluna de status:
+## Otimizações Propostas
 
+### 1. Paralelizar chamadas OSRM dentro dos batches
+
+**Arquivo:** `supabase/functions/calculate-routes/index.ts`
+
+**Antes:** Processar 1 rota por vez dentro do batch
 ```typescript
-const statusColIndex = findColumn(headers, ['situação', 'situacao', 'status']);
-```
-
-**2. Filtrar locais inativos silenciosamente**
-
-No loop de parsing, antes de processar o nome, verificar o status:
-
-```typescript
-// Check status column - skip inactive locations silently
-if (statusColIndex !== -1) {
-  const statusValue = String(row[statusColIndex] || '').trim().toLowerCase();
-  const normalizedStatus = statusValue.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  
-  // Only include locations with "ativo" status
-  if (normalizedStatus !== 'ativo') {
-    continue;
-  }
+for (const location of batch) {
+  const route = await getRouteDistanceWithRetry(...);
+  await sleep(100); // Delay sequencial
 }
 ```
 
----
-
-### Arquivo: `public/modelo-prestadores.csv`
-
-Atualizar estrutura com as novas colunas ID e Situação:
-
-```csv
-Nome do local,ID,Situação,CEP,Endereço (logradouro),Número,Bairro,Cidade,Estado (UF),Latitude,Longitude
-Clínica São Lucas,001,Ativo,01310-100,Avenida Paulista,1000,Bela Vista,São Paulo,SP,-23.5505,-46.6333
-...
-Clínica Vida Nova,005,Inativo,02012-000,Rua das Flores,300,Santana,São Paulo,SP,-23.5200,-46.6100
-...
+**Depois:** Processar todas as rotas do batch em paralelo
+```typescript
+const batchPromises = batch.map(location => 
+  getRouteDistanceWithRetry(...)
+);
+const batchResults = await Promise.all(batchPromises);
 ```
 
 ---
 
-## Comportamento
+### 2. Reduzir delays entre batches
 
-| Situação | Resultado |
-|----------|-----------|
-| "Ativo" | Incluído na busca |
-| "ativo" | Incluído (case insensitive) |
-| "Inativo" | Ignorado silenciosamente |
-| Célula vazia | Ignorado silenciosamente |
-| Coluna não existe | Todos incluídos (compatibilidade) |
+**Arquivo:** `supabase/functions/calculate-routes/index.ts`
+
+| Parâmetro | Atual | Otimizado |
+|-----------|-------|-----------|
+| Delay entre batches | 500ms | 200ms |
+| Tamanho do batch | 5 | 5 (manter) |
 
 ---
 
-## Notas
+### 3. Usar OSRM Table API para múltiplas rotas
 
-- A coluna "ID" será ignorada (não precisa de mapeamento)
-- Locais inativos não serão mencionados na mensagem de sucesso
-- A mensagem mostrará apenas os locais ativos carregados
+**Arquivo:** `supabase/functions/calculate-routes/index.ts`
 
+A OSRM oferece uma API Table que calcula distâncias de um ponto para múltiplos destinos em uma única chamada HTTP.
+
+**Antes:** 20 chamadas HTTP (uma por destino)
+**Depois:** 1-4 chamadas HTTP (múltiplos destinos por chamada)
+
+Endpoint: `/table/v1/driving/lon1,lat1;lon2,lat2;...?sources=0&annotations=distance,duration`
+
+---
+
+### 4. Otimizar geocodificação com estratégias paralelas seletivas
+
+**Arquivo:** `src/lib/geocoding.ts`
+
+Para casos com endereço completo, executar estratégias 1 e 2 em paralelo:
+
+```typescript
+// Se temos street e number, tentar ambos simultaneamente
+const [fullResult, streetOnlyResult] = await Promise.all([
+  tryStructuredGeocode({ street: streetWithNumber, city, state }),
+  tryStructuredGeocode({ street, city, state })
+]);
+```
+
+---
+
+## Estimativa de Ganhos
+
+| Métrica | Atual | Otimizado | Melhoria |
+|---------|-------|-----------|----------|
+| Tempo total | 4-5s | 1.5-2s | ~60% mais rápido |
+| Chamadas HTTP OSRM | 20 | 4-5 | 75% menos |
+| Delays totais | ~3.5s | ~0.8s | 77% menos |
+
+---
+
+## Alterações Detalhadas
+
+### Arquivo: `supabase/functions/calculate-routes/index.ts`
+
+1. **Nova função para OSRM Table API**
+   - Calcula distâncias de 1 origem para N destinos em uma única chamada
+   - Fallback para chamadas individuais se a Table API falhar
+
+2. **Remover delays sequenciais dentro dos batches**
+   - Processar em paralelo com Promise.all
+
+3. **Reduzir delay entre batches**
+   - 500ms → 200ms
+
+### Arquivo: `src/lib/geocoding.ts`
+
+1. **Paralelizar estratégias iniciais**
+   - Quando street e number existem, testar estratégias 1 e 2 simultaneamente
+
+---
+
+## Considerações de Estabilidade
+
+- Manter retry com backoff exponencial para rate limiting
+- OSRM Table API tem limite de ~100 pontos por chamada (usaremos 10)
+- Fallback automático para método sequencial se API Table falhar
+- Logs detalhados para monitoramento
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `supabase/functions/calculate-routes/index.ts` | Implementar Table API + paralelização |
+| `src/lib/geocoding.ts` | Paralelizar estratégias iniciais |
