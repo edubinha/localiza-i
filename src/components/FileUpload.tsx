@@ -88,14 +88,16 @@ export function FileUpload({ onDataLoaded, locationsCount }: FileUploadProps) {
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            onChange={handleChange}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            disabled={isLoading}
-          />
+          {!isLoaded && (
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              onChange={handleChange}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              disabled={isLoading}
+            />
+          )}
           
           <div className="flex flex-col items-center justify-center py-8 text-center">
             {isLoading ? (

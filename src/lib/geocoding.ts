@@ -19,16 +19,8 @@ async function tryGeocode(address: string, city?: string, state?: string): Promi
   try {
     const encodedAddress = encodeURIComponent(address);
     
-    // Build structured query params for better accuracy
-    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&countrycodes=br&limit=5`;
-    
-    // Add city and state as structured params for better disambiguation
-    if (city) {
-      url += `&city=${encodeURIComponent(city)}`;
-    }
-    if (state) {
-      url += `&state=${encodeURIComponent(state)}`;
-    }
+    // Use only q parameter (Nominatim doesn't allow mixing q with structured params)
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&countrycodes=br&limit=5`;
     
     const response = await fetch(url, {
       headers: {
@@ -46,14 +38,14 @@ async function tryGeocode(address: string, city?: string, state?: string): Promi
       return null;
     }
 
-    // If we have city/state context, try to find the best match
-    if (city && data.length > 1) {
+    // If we have city/state context, try to find the best match by validating results
+    if (city && data.length > 0) {
       const cityLower = city.toLowerCase();
       const stateLower = state?.toLowerCase();
       
       for (const result of data) {
         const displayLower = result.display_name.toLowerCase();
-        // Check if both city and state are in the display name
+        // Check if both city and state are in the display name for accuracy
         if (displayLower.includes(cityLower) && (!stateLower || displayLower.includes(stateLower))) {
           return {
             lat: parseFloat(result.lat),
@@ -63,7 +55,7 @@ async function tryGeocode(address: string, city?: string, state?: string): Promi
       }
     }
 
-    // Fall back to first result
+    // Fall back to first result only if no city filter or if validation passed
     return {
       lat: parseFloat(data[0].lat),
       lon: parseFloat(data[0].lon),
