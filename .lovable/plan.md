@@ -1,129 +1,78 @@
 
-# Plano: Otimização de Performance da Busca
 
-## Objetivo
+# Plano: Correção de Erros no Cálculo de Rotas
 
-Acelerar o carregamento dos resultados sem comprometer a estabilidade da aplicação, reduzindo o tempo total de ~4-5 segundos para ~1.5-2 segundos.
+## Problema Identificado
 
----
-
-## Gargalos Identificados
-
-| Componente | Problema | Impacto |
-|------------|----------|---------|
-| Edge Function | Chamadas OSRM sequenciais | ~3.5s de delays |
-| Edge Function | Delays entre requests | Conservador demais |
-| Geocodificação | 5 estratégias sequenciais | ~500ms-2s por busca |
+A aplicação está falhando ao calcular rotas devido a um **problema de CORS (Cross-Origin Resource Sharing)**. A Edge Function está rejeitando requisições vindas do domínio de preview da aplicação.
 
 ---
 
-## Otimizações Propostas
+## Diagnóstico Detalhado
 
-### 1. Paralelizar chamadas OSRM dentro dos batches
+### Causa Raiz do Erro Principal
+
+| Aspecto | Valor Atual | Problema |
+|---------|-------------|----------|
+| Origem da requisição | `https://...lovableproject.com` | Domínio de desenvolvimento |
+| Origens permitidas no CORS | `.lovable.app`, `localhost` | Não inclui `.lovableproject.com` |
+| Resultado | Requisição bloqueada pelo navegador | Erro "Failed to fetch" |
+
+A verificação CORS atual usa `origin.endsWith('.lovable.app')`, mas o domínio de preview é `.lovableproject.com`.
+
+### Problema Secundário (Warning no Console)
+
+O componente `ResultsList` está recebendo uma ref mas não é um componente que suporta refs (não usa `forwardRef`). Isso causa um warning no console.
+
+---
+
+## Alterações Planejadas
+
+### 1. Corrigir CORS na Edge Function
 
 **Arquivo:** `supabase/functions/calculate-routes/index.ts`
 
-**Antes:** Processar 1 rota por vez dentro do batch
-```typescript
-for (const location of batch) {
-  const route = await getRouteDistanceWithRetry(...);
-  await sleep(100); // Delay sequencial
-}
+Atualizar a verificação de origens permitidas para incluir tanto `.lovable.app` quanto `.lovableproject.com`:
+
+```text
+Antes:
+  origin.endsWith('.lovable.app')
+
+Depois:
+  origin.endsWith('.lovable.app') || origin.endsWith('.lovableproject.com')
 ```
 
-**Depois:** Processar todas as rotas do batch em paralelo
-```typescript
-const batchPromises = batch.map(location => 
-  getRouteDistanceWithRetry(...)
-);
-const batchResults = await Promise.all(batchPromises);
-```
+### 2. Corrigir Warning de Ref no ResultsList
 
----
+**Arquivo:** `src/components/ResultsList.tsx`
 
-### 2. Reduzir delays entre batches
+Atualizar o componente para usar `forwardRef` e evitar o warning do React:
 
-**Arquivo:** `supabase/functions/calculate-routes/index.ts`
+```text
+Antes:
+  export function ResultsList({ results, isLoading, error }: ResultsListProps) { ... }
 
-| Parâmetro | Atual | Otimizado |
-|-----------|-------|-----------|
-| Delay entre batches | 500ms | 200ms |
-| Tamanho do batch | 5 | 5 (manter) |
-
----
-
-### 3. Usar OSRM Table API para múltiplas rotas
-
-**Arquivo:** `supabase/functions/calculate-routes/index.ts`
-
-A OSRM oferece uma API Table que calcula distâncias de um ponto para múltiplos destinos em uma única chamada HTTP.
-
-**Antes:** 20 chamadas HTTP (uma por destino)
-**Depois:** 1-4 chamadas HTTP (múltiplos destinos por chamada)
-
-Endpoint: `/table/v1/driving/lon1,lat1;lon2,lat2;...?sources=0&annotations=distance,duration`
-
----
-
-### 4. Otimizar geocodificação com estratégias paralelas seletivas
-
-**Arquivo:** `src/lib/geocoding.ts`
-
-Para casos com endereço completo, executar estratégias 1 e 2 em paralelo:
-
-```typescript
-// Se temos street e number, tentar ambos simultaneamente
-const [fullResult, streetOnlyResult] = await Promise.all([
-  tryStructuredGeocode({ street: streetWithNumber, city, state }),
-  tryStructuredGeocode({ street, city, state })
-]);
+Depois:
+  export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
+    function ResultsList({ results, isLoading, error }, ref) { ... }
+  );
 ```
 
 ---
 
-## Estimativa de Ganhos
-
-| Métrica | Atual | Otimizado | Melhoria |
-|---------|-------|-----------|----------|
-| Tempo total | 4-5s | 1.5-2s | ~60% mais rápido |
-| Chamadas HTTP OSRM | 20 | 4-5 | 75% menos |
-| Delays totais | ~3.5s | ~0.8s | 77% menos |
-
----
-
-## Alterações Detalhadas
-
-### Arquivo: `supabase/functions/calculate-routes/index.ts`
-
-1. **Nova função para OSRM Table API**
-   - Calcula distâncias de 1 origem para N destinos em uma única chamada
-   - Fallback para chamadas individuais se a Table API falhar
-
-2. **Remover delays sequenciais dentro dos batches**
-   - Processar em paralelo com Promise.all
-
-3. **Reduzir delay entre batches**
-   - 500ms → 200ms
-
-### Arquivo: `src/lib/geocoding.ts`
-
-1. **Paralelizar estratégias iniciais**
-   - Quando street e number existem, testar estratégias 1 e 2 simultaneamente
-
----
-
-## Considerações de Estabilidade
-
-- Manter retry com backoff exponencial para rate limiting
-- OSRM Table API tem limite de ~100 pontos por chamada (usaremos 10)
-- Fallback automático para método sequencial se API Table falhar
-- Logs detalhados para monitoramento
-
----
-
-## Arquivos a Modificar
+## Resumo das Alterações
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `supabase/functions/calculate-routes/index.ts` | Implementar Table API + paralelização |
-| `src/lib/geocoding.ts` | Paralelizar estratégias iniciais |
+| `supabase/functions/calculate-routes/index.ts` | Adicionar `.lovableproject.com` à lista de origens CORS |
+| `src/components/ResultsList.tsx` | Converter para `forwardRef` |
+
+---
+
+## Resultado Esperado
+
+Após as correções:
+- As requisições para calcular rotas funcionarão corretamente
+- O warning de ref será eliminado do console
+- A aplicação funcionará tanto em preview (`lovableproject.com`) quanto em produção (`lovable.app`)
+
