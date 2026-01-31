@@ -10,7 +10,7 @@ interface FileUploadProps {
   locationsCount: number;
 }
 
-const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCV3tFeR8Tp2gFFiUKw3UxuwpHnD7SYz8KiD0Iukuov_yvOTXT2iLNwYfW0waSdAPsijkYh3l3Xx4a/pub?gid=1434258017&single=true&output=csv';
+const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT669HNj9Xp01XeXIonmyAayOWIPlN_VsBl5sQpcXOL1NotshQp5s4kYN1x0gtypa_XqShZS8vgesAU/pub?gid=0&single=true&output=csv';
 
 export function FileUpload({ onDataLoaded, locationsCount }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
