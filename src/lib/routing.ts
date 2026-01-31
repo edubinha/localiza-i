@@ -25,54 +25,69 @@ export async function calculateRoutes(
   locations: LocationData[]
 ): Promise<RouteResult[]> {
   // Pre-filter locations using Haversine distance to reduce payload
+  // Also sort by distance to prioritize closest locations
   const nearbyLocations = locations
-    .filter(loc => {
-      if (loc.latitude === undefined || loc.longitude === undefined) return false;
-      const distance = calculateDistance(
+    .map(loc => {
+      if (loc.latitude === undefined || loc.longitude === undefined) {
+        return null;
+      }
+      const haversineDistance = calculateDistance(
         originLat,
         originLon,
         loc.latitude,
         loc.longitude
       );
-      return distance <= MAX_HAVERSINE_DISTANCE_KM;
+      return { ...loc, haversineDistance };
     })
+    .filter((loc): loc is LocationData & { haversineDistance: number } => 
+      loc !== null && loc.haversineDistance <= MAX_HAVERSINE_DISTANCE_KM
+    )
+    .sort((a, b) => a.haversineDistance - b.haversineDistance)
     .slice(0, 100); // Ensure we never exceed the limit
 
   if (nearbyLocations.length === 0) {
     return []; // No locations within range
   }
 
-  const { data, error } = await supabase.functions.invoke("calculate-routes", {
-    body: {
-      originLat,
-      originLon,
-      locations: nearbyLocations,
-    },
-  });
+  try {
+    const { data, error } = await supabase.functions.invoke("calculate-routes", {
+      body: {
+        originLat,
+        originLon,
+        locations: nearbyLocations,
+      },
+    });
 
-  if (error) {
-    devLog.error("Error calling calculate-routes:", error);
+    if (error) {
+      devLog.error("Error calling calculate-routes:", error);
+      throw new Error("Erro ao calcular rotas. Por favor, tente novamente.");
+    }
+
+    if (!data?.routes || !Array.isArray(data.routes)) {
+      throw new Error("Resposta inválida do servidor.");
+    }
+
+    return data.routes.map((route: { 
+      name: string; 
+      distanceKm: number; 
+      durationMinutes: number;
+      address?: string;
+      number?: string;
+      neighborhood?: string;
+      city?: string;
+      state?: string;
+    }) => ({
+      ...route,
+      formattedDistance: formatDistance(route.distanceKm),
+      formattedDuration: formatDuration(route.durationMinutes),
+    }));
+  } catch (error) {
+    devLog.error("Calculate routes error:", error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Erro ao calcular rotas. Por favor, tente novamente.");
   }
-
-  if (!data.routes || !Array.isArray(data.routes)) {
-    throw new Error("Resposta inválida do servidor.");
-  }
-
-  return data.routes.map((route: { 
-    name: string; 
-    distanceKm: number; 
-    durationMinutes: number;
-    address?: string;
-    number?: string;
-    neighborhood?: string;
-    city?: string;
-    state?: string;
-  }) => ({
-    ...route,
-    formattedDistance: formatDistance(route.distanceKm),
-    formattedDuration: formatDuration(route.durationMinutes),
-  }));
 }
 
 function formatDistance(distanceKm: number): string {
@@ -93,3 +108,4 @@ function formatDuration(minutes: number): string {
   }
   return `${hours}h ${remainingMinutes}min`;
 }
+

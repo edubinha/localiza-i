@@ -1,5 +1,6 @@
 import readXlsxFile from 'read-excel-file';
 import { parseCSV } from './csv';
+import { devLog } from './logger';
 
 export interface LocationData {
   name: string;
@@ -195,7 +196,7 @@ export function parseSpreadsheetText(csvText: string, hasNameRow: boolean = fals
     
     return parseRows(rows as unknown[][]);
   } catch (error) {
-    console.error('Parse error:', error);
+    devLog.error('Parse error:', error);
     return {
       success: false,
       data: [],
@@ -222,7 +223,7 @@ export async function parseSpreadsheet(file: File): Promise<ParseResult> {
 
     return parseRows(jsonData);
   } catch (error) {
-    console.error('Parse error:', error);
+    devLog.error('Parse error:', error);
     return {
       success: false,
       data: [],
