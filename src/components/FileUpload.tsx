@@ -82,8 +82,15 @@ export function FileUpload({ onDataLoaded, locationsCount }: FileUploadProps) {
           continue;
         }
 
-        const latitude = typeof latValue === 'number' ? latValue : parseFloat(String(latValue));
-        const longitude = typeof lonValue === 'number' ? lonValue : parseFloat(String(lonValue));
+        const parseCoordinate = (value: unknown): number => {
+          if (typeof value === 'number') return value;
+          // Normaliza vírgula para ponto (formato brasileiro)
+          const normalized = String(value).replace(',', '.');
+          return parseFloat(normalized);
+        };
+
+        const latitude = parseCoordinate(latValue);
+        const longitude = parseCoordinate(lonValue);
 
         if (isNaN(latitude) || isNaN(longitude)) {
           errors.push(`Linha ${i + 1}: Coordenadas inválidas para "${name}"`);

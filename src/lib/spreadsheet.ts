@@ -22,6 +22,13 @@ function normalizeColumnName(name: string): string {
   return name.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+function parseCoordinate(value: unknown): number {
+  if (typeof value === 'number') return value;
+  // Normaliza vírgula para ponto (formato brasileiro)
+  const normalized = String(value).replace(',', '.');
+  return parseFloat(normalized);
+}
+
 function findColumn(headers: string[], possibleNames: string[]): number {
   for (const name of possibleNames) {
     const normalizedName = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -98,8 +105,8 @@ export function parseSpreadsheet(file: File): Promise<ParseResult> {
             continue;
           }
 
-          const latitude = typeof latValue === 'number' ? latValue : parseFloat(String(latValue));
-          const longitude = typeof lonValue === 'number' ? lonValue : parseFloat(String(lonValue));
+          const latitude = parseCoordinate(latValue);
+          const longitude = parseCoordinate(lonValue);
 
           if (isNaN(latitude) || isNaN(longitude)) {
             errors.push(`Linha ${i + 1}: Coordenadas inválidas para "${name}"`);
