@@ -180,16 +180,13 @@ export async function geocodeAddress(
     }
   }
 
-  // Strategy 3: Structured search with neighborhood as street
+  // Strategy 3: Free-text search for neighborhood
+  // Nominatim finds neighborhoods better with free-text queries (place=suburb/neighbourhood)
   if (!result && neighborhood) {
-    result = await tryStructuredGeocode({
-      street: neighborhood,
-      city,
-      state,
-      country: 'Brasil',
-    });
+    const neighborhoodQuery = `${neighborhood}, ${city}, ${state}, Brasil`;
+    result = await tryFreeTextGeocode(neighborhoodQuery, city, state);
     if (result) {
-      searchUsed = 'bairro (estruturado)';
+      searchUsed = 'bairro (busca textual)';
     }
   }
 
