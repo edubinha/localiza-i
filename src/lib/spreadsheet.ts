@@ -24,11 +24,16 @@ function normalizeColumnName(name: string): string {
 
 function parseCoordinate(value: unknown): number {
   if (typeof value === 'number') return value;
-  // Remove aspas e normaliza vírgula para ponto (formato brasileiro)
-  const normalized = String(value)
-    .replace(/^["']|["']$/g, '') // Remove aspas no início/fim
-    .trim()
-    .replace(',', '.');
+
+  const raw = String(value ?? '').trim();
+  if (!raw) return NaN;
+
+  // Normaliza número pt-BR (ex: "-23,292" ou "1.234,56") e remove aspas
+  const noQuotes = raw.replace(/["']/g, '');
+  const normalized = /,\d+$/.test(noQuotes)
+    ? noQuotes.replace(/\./g, '').replace(',', '.')
+    : noQuotes.replace(',', '.');
+
   return parseFloat(normalized);
 }
 
