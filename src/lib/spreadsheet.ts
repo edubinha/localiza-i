@@ -4,6 +4,7 @@ export interface LocationData {
   name: string;
   latitude: number;
   longitude: number;
+  cep?: string;
   address?: string;
   number?: string;
   neighborhood?: string;
@@ -17,15 +18,14 @@ export interface ParseResult {
   error?: string;
 }
 
-const REQUIRED_COLUMNS = ['nome do local', 'latitude', 'longitude'];
-
 function normalizeColumnName(name: string): string {
-  return name.toLowerCase().trim();
+  return name.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
 function findColumn(headers: string[], possibleNames: string[]): number {
   for (const name of possibleNames) {
-    const index = headers.findIndex(h => normalizeColumnName(h) === name);
+    const normalizedName = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const index = headers.findIndex(h => normalizeColumnName(h) === normalizedName);
     if (index !== -1) return index;
   }
   return -1;
@@ -38,7 +38,7 @@ export function parseSpreadsheet(file: File): Promise<ParseResult> {
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
+        const workbook = XLSX.read(data, { type: file.name.endsWith('.csv') ? 'string' : 'array', codepage: 65001 });
         
         // Get first sheet
         const sheetName = workbook.SheetNames[0];
@@ -64,7 +64,8 @@ export function parseSpreadsheet(file: File): Promise<ParseResult> {
         const nameColIndex = findColumn(headers, ['nome do local', 'nome', 'local', 'name']);
         const latColIndex = findColumn(headers, ['latitude', 'lat']);
         const lonColIndex = findColumn(headers, ['longitude', 'lon', 'long', 'lng']);
-        const addressColIndex = findColumn(headers, ['endereço', 'endereco', 'address', 'rua']);
+        const cepColIndex = findColumn(headers, ['cep']);
+        const addressColIndex = findColumn(headers, ['endereço (logradouro)', 'endereço', 'endereco', 'address', 'rua', 'logradouro']);
         const numberColIndex = findColumn(headers, ['número', 'numero', 'number', 'num']);
         const neighborhoodColIndex = findColumn(headers, ['bairro', 'neighborhood']);
         const cityColIndex = findColumn(headers, ['cidade', 'city']);
@@ -111,6 +112,7 @@ export function parseSpreadsheet(file: File): Promise<ParseResult> {
           }
 
           // Extract optional address fields
+          const cep = cepColIndex !== -1 ? String(row[cepColIndex] || '').trim() : undefined;
           const address = addressColIndex !== -1 ? String(row[addressColIndex] || '').trim() : undefined;
           const number = numberColIndex !== -1 ? String(row[numberColIndex] || '').trim() : undefined;
           const neighborhood = neighborhoodColIndex !== -1 ? String(row[neighborhoodColIndex] || '').trim() : undefined;
@@ -121,6 +123,7 @@ export function parseSpreadsheet(file: File): Promise<ParseResult> {
             name, 
             latitude, 
             longitude,
+            cep: cep || undefined,
             address: address || undefined,
             number: number || undefined,
             neighborhood: neighborhood || undefined,
@@ -164,9 +167,9 @@ export function parseSpreadsheet(file: File): Promise<ParseResult> {
     };
 
     if (file.name.endsWith('.csv')) {
-      reader.readAsText(file);
+      reader.readAsText(file, 'UTF-8');
     } else {
-      reader.readAsBinaryString(file);
+      reader.readAsArrayBuffer(file);
     }
   });
 }

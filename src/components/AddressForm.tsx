@@ -38,9 +38,9 @@ interface ViaCepResponse {
 
 const addressSchema = z.object({
   cep: z.string().optional(),
-  street: z.string().min(3, 'Endereço deve ter pelo menos 3 caracteres'),
-  number: z.string().min(1, 'Número é obrigatório'),
-  neighborhood: z.string().min(2, 'Bairro deve ter pelo menos 2 caracteres'),
+  street: z.string().optional(),
+  number: z.string().optional(),
+  neighborhood: z.string().optional(),
   city: z.string().min(2, 'Cidade deve ter pelo menos 2 caracteres'),
   state: z.string().min(2, 'Selecione um estado'),
 });

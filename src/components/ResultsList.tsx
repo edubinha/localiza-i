@@ -16,8 +16,11 @@ function formatLocation(neighborhood?: string, city?: string, state?: string): s
 }
 
 function formatFullAddress(address?: string, number?: string, neighborhood?: string, city?: string, state?: string): string {
-  const street = address && number ? `${address}, ${number}` : address || '';
-  const parts = [street, neighborhood, city, state].filter(Boolean);
+  // Format: "Rua Solidônio Leite, 231 - Vila Ivone, São Paulo - SP"
+  const streetWithNumber = address && number ? `${address}, ${number}` : address || '';
+  const neighborhoodCity = [neighborhood, city].filter(Boolean).join(', ');
+  
+  const parts = [streetWithNumber, neighborhoodCity, state].filter(Boolean);
   return parts.join(' - ');
 }
 
