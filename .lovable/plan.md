@@ -1,35 +1,45 @@
 
-# Plano: Otimização do Teclado Mobile para Campos CEP e Número
 
-## Objetivo
+# Plano: Correção dos Campos CEP e Número
 
-Melhorar a experiência de preenchimento no celular configurando os teclados virtuais adequados para cada campo.
+## Problemas Identificados
+
+### 1. CEP - Erro de Validação do Pattern
+
+| Aspecto | Situação |
+|---------|----------|
+| Valor do campo | `12345-678` (com hífen) |
+| Pattern atual | `[0-9]*` (só aceita dígitos) |
+| Resultado | Navegador bloqueia o submit |
+
+O atributo `pattern="[0-9]*"` valida o conteúdo do campo, mas o CEP formatado inclui um hífen, causando falha na validação nativa do navegador.
+
+### 2. Número - Teclado Fixo
+
+O `inputMode="numeric"` em dispositivos iOS não oferece opção de alternar para teclado com letras. O teclado fica travado no modo numérico.
 
 ---
 
-## Comportamentos Desejados
+## Soluções
 
-| Campo | Teclado Inicial | Permite Letras? |
-|-------|-----------------|-----------------|
-| CEP | Numérico | Não |
-| Número | Numérico | Sim (usuário pode alternar) |
+### Campo CEP
 
----
+**Opção escolhida:** Atualizar o pattern para aceitar o formato com hífen.
 
-## Solução Técnica
+```text
+Antes:  pattern="[0-9]*"
+Depois: pattern="[0-9]{5}-?[0-9]{3}"
+```
 
-Utilizaremos atributos HTML5 que controlam o comportamento do teclado virtual em dispositivos móveis:
+Este pattern aceita:
+- `12345678` (8 dígitos sem hífen)
+- `12345-678` (5 dígitos, hífen, 3 dígitos)
 
-- **`inputMode`**: Define qual tipo de teclado virtual o navegador deve exibir
-- **`pattern`**: Define um padrão de validação (também influencia alguns navegadores)
+### Campo Número
 
-### Valores do inputMode
+**Opção escolhida:** Remover o `inputMode="numeric"` para permitir o teclado padrão com possibilidade de alternar.
 
-| Valor | Comportamento |
-|-------|---------------|
-| `numeric` | Teclado numérico (0-9), usuário pode alternar |
-| `tel` | Teclado telefônico (mais restritivo em alguns dispositivos) |
-| `text` | Teclado alfanumérico padrão |
+Como o campo Número precisa aceitar letras (ex: "123A", "S/N"), o teclado deve ser o alfanumérico padrão. O usuário pode digitar números normalmente, mas também tem acesso às letras quando necessário.
 
 ---
 
@@ -37,64 +47,39 @@ Utilizaremos atributos HTML5 que controlam o comportamento do teclado virtual em
 
 **Arquivo:** `src/components/AddressForm.tsx`
 
-### Campo CEP (linhas 249-256)
-
-Adicionar `inputMode="numeric"` e `pattern="[0-9]*"` para garantir apenas números:
-
+### Linha 256 - Campo CEP
 ```tsx
-<Input 
-  placeholder="00000-000" 
-  {...field}
-  onChange={(e) => handleCepChange(e.target.value)}
-  maxLength={9}
-  disabled={isDisabled}
-  inputMode="numeric"
-  pattern="[0-9]*"
-  className={cepError ? 'border-destructive pr-10' : 'pr-10'}
-/>
+// Antes
+pattern="[0-9]*"
+
+// Depois
+pattern="[0-9]{5}-?[0-9]{3}"
 ```
 
-### Campo Número (linhas 280-284)
-
-Adicionar `inputMode="numeric"` para mostrar teclado numérico por padrão, mas permitindo alternância:
-
+### Linha 286 - Campo Número
 ```tsx
-<Input 
-  placeholder="Ex: 123" 
-  {...field} 
-  disabled={isDisabled}
-  inputMode="numeric"
-/>
+// Antes
+inputMode="numeric"
+
+// Depois (remover a linha)
+// (sem inputMode - usa teclado padrão)
 ```
 
 ---
 
-## Diferença de Comportamento
+## Resumo das Alterações
 
-| Configuração | CEP | Número |
-|--------------|-----|--------|
-| `inputMode` | `numeric` | `numeric` |
-| `pattern` | `[0-9]*` | *(não definido)* |
-| Resultado | Força teclado numérico | Teclado numérico com opção de alternar |
-
-A combinação de `inputMode="numeric"` + `pattern="[0-9]*"` no campo CEP cria uma experiência mais restritiva, ideal para campos que só aceitam números. Já o campo Número usa apenas `inputMode="numeric"`, o que sugere o teclado numérico mas permite ao usuário alternar para o alfanumérico quando necessário (ex: "123A").
+| Campo | Alteração | Resultado |
+|-------|-----------|-----------|
+| CEP | Pattern atualizado para aceitar hífen | Validação funciona com formato "00000-000" |
+| Número | Remover inputMode | Teclado alfanumérico com opção de alternar |
 
 ---
 
-## Arquivos Modificados
+## Comportamento Final
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/AddressForm.tsx` | Adicionar atributos `inputMode` e `pattern` nos campos CEP e Número |
+| Campo | Teclado Mobile | Aceita |
+|-------|----------------|--------|
+| CEP | Numérico (via `inputMode="numeric"`) | Apenas números, formatado automaticamente |
+| Número | Alfanumérico padrão | Números e letras (ex: "123A") |
 
----
-
-## Compatibilidade
-
-Esta solução funciona em:
-- iOS Safari
-- Chrome Android
-- Samsung Internet
-- Firefox Mobile
-
-Não afeta o comportamento em desktop (os atributos são ignorados quando não há teclado virtual).
