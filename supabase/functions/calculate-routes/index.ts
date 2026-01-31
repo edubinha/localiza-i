@@ -1,10 +1,31 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+// Allowed origins for CORS - restrict to your domains
+const ALLOWED_ORIGINS = [
+  "https://id-preview--dd0f1f18-b3a6-40c0-a96b-4abaaca86b05.lovable.app",
+  "https://lovable.dev",
+  "http://localhost:5173",
+  "http://localhost:8080",
+];
+
+// Constants for validation
+const MAX_LOCATIONS = 100;
+const MAX_LATITUDE = 90;
+const MIN_LATITUDE = -90;
+const MAX_LONGITUDE = 180;
+const MIN_LONGITUDE = -180;
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.some(allowed => 
+    origin === allowed || origin.endsWith('.lovable.app')
+  ) ? origin : ALLOWED_ORIGINS[0];
+  
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+}
 
 interface Location {
   name: string;
@@ -32,6 +53,78 @@ interface RouteResult {
   neighborhood?: string;
   city?: string;
   state?: string;
+}
+
+// Validation helper functions
+function isValidCoordinate(lat: number, lon: number): boolean {
+  return (
+    typeof lat === "number" &&
+    typeof lon === "number" &&
+    !isNaN(lat) &&
+    !isNaN(lon) &&
+    lat >= MIN_LATITUDE &&
+    lat <= MAX_LATITUDE &&
+    lon >= MIN_LONGITUDE &&
+    lon <= MAX_LONGITUDE
+  );
+}
+
+function isValidLocation(loc: unknown): loc is Location {
+  if (typeof loc !== "object" || loc === null) return false;
+  const location = loc as Record<string, unknown>;
+  return (
+    typeof location.name === "string" &&
+    typeof location.latitude === "number" &&
+    typeof location.longitude === "number" &&
+    isValidCoordinate(location.latitude, location.longitude)
+  );
+}
+
+function validateRequest(body: unknown): { valid: true; data: RouteRequest } | { valid: false; error: string } {
+  if (typeof body !== "object" || body === null) {
+    return { valid: false, error: "Corpo da requisição inválido" };
+  }
+
+  const request = body as Record<string, unknown>;
+  const { originLat, originLon, locations } = request;
+
+  // Validate origin coordinates
+  if (typeof originLat !== "number" || typeof originLon !== "number") {
+    return { valid: false, error: "Coordenadas de origem devem ser números" };
+  }
+
+  if (!isValidCoordinate(originLat, originLon)) {
+    return { valid: false, error: "Coordenadas de origem fora do intervalo válido" };
+  }
+
+  // Validate locations array
+  if (!Array.isArray(locations)) {
+    return { valid: false, error: "Localizações deve ser um array" };
+  }
+
+  if (locations.length === 0) {
+    return { valid: false, error: "Array de localizações está vazio" };
+  }
+
+  if (locations.length > MAX_LOCATIONS) {
+    return { valid: false, error: `Máximo de ${MAX_LOCATIONS} localizações permitidas` };
+  }
+
+  // Validate each location
+  for (let i = 0; i < locations.length; i++) {
+    if (!isValidLocation(locations[i])) {
+      return { valid: false, error: `Localização ${i + 1} inválida` };
+    }
+  }
+
+  return {
+    valid: true,
+    data: {
+      originLat: originLat as number,
+      originLon: originLon as number,
+      locations: locations as Location[],
+    },
+  };
 }
 
 // Haversine formula for straight-line distance
@@ -193,23 +286,52 @@ async function processBatchWithTableAPI(
 }
 
 serve(async (req) => {
+  const origin = req.headers.get("Origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const { originLat, originLon, locations }: RouteRequest = await req.json();
+  // Only allow POST method
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Método não permitido" }),
+      {
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
 
-    if (!originLat || !originLon || !locations || !Array.isArray(locations)) {
+  try {
+    // Parse and validate request body
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
       return new Response(
-        JSON.stringify({ error: "Parâmetros inválidos" }),
+        JSON.stringify({ error: "JSON inválido" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
+
+    const validation = validateRequest(body);
+    if (!validation.valid) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const { originLat, originLon, locations } = validation.data;
 
     console.log(`Processing ${locations.length} locations`);
 
