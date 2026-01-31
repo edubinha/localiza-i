@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MapPin, Navigation, Clock, Info, ChevronDown, ChevronUp, FlaskConical } from 'lucide-react';
+import { MapPin, Navigation, Info, ChevronDown, ChevronUp, FlaskConical } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -34,6 +34,7 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
   const locationSummary = formatLocation(result.neighborhood, result.city, result.state);
   const fullAddress = formatFullAddress(result.address, result.number, result.neighborhood, result.city, result.state);
   const hasAddressDetails = result.address || result.neighborhood || result.city;
+  const isLaboratory = result.name.toLowerCase().startsWith('laboratório');
 
   return (
     <div
@@ -44,21 +45,18 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
           <span className="font-bold text-navy">{index + 1}</span>
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-foreground truncate">{result.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium text-foreground truncate">{result.name}</h3>
+            {isLaboratory && (
+              <FlaskConical className="h-4 w-4 text-blue-600 flex-shrink-0" />
+            )}
+          </div>
           {locationSummary && (
             <p className="text-sm text-muted-foreground truncate">{locationSummary}</p>
           )}
-          <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <MapPin className="h-4 w-4 text-emerald" />
-              <span className="font-medium text-emerald">{result.formattedDistance}</span>
-            </div>
-            {result.formattedDuration && (
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4 text-navy" />
-                <span className="font-medium text-navy">{result.formattedDuration}</span>
-              </div>
-            )}
+          <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4 text-emerald" />
+            <span className="font-medium text-emerald">{result.formattedDistance}</span>
           </div>
         </div>
         {hasAddressDetails && (
