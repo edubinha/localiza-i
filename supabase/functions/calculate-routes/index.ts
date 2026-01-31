@@ -1,5 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+// Environment check - suppress verbose logs in production
+const isDev = Deno.env.get("DENO_ENV") === "development" || Deno.env.get("FUNCTIONS_ENV") === "development";
+
+// Development-only logging
+const devLog = {
+  error: (message: string, ...args: unknown[]) => {
+    if (isDev) console.error(message, ...args);
+  },
+  log: (message: string, ...args: unknown[]) => {
+    if (isDev) console.log(message, ...args);
+  },
+};
+
 // Allowed origins for CORS - restrict to your domains
 const ALLOWED_ORIGINS = [
   "https://id-preview--dd0f1f18-b3a6-40c0-a96b-4abaaca86b05.lovable.app",
@@ -188,14 +201,14 @@ async function getTableDistances(
     });
 
     if (!response.ok) {
-      console.error(`OSRM Table API error: ${response.status}`);
+      devLog.error(`OSRM Table API error: ${response.status}`);
       return null;
     }
 
     const data = await response.json();
 
     if (data.code !== "Ok") {
-      console.error("OSRM Table API returned error:", data.code);
+      devLog.error("OSRM Table API returned error:", data.code);
       return null;
     }
 
@@ -206,7 +219,7 @@ async function getTableDistances(
 
     return { distances, durations };
   } catch (error) {
-    console.error("Table API error:", error);
+    devLog.error("Table API error:", error);
     return null;
   }
 }
@@ -251,7 +264,7 @@ async function processBatchWithTableAPI(
   }
 
   // Fallback: process in parallel with individual route requests
-  console.log("Table API failed, falling back to parallel individual requests");
+  devLog.log("Table API failed, falling back to parallel individual requests");
   
   const promises = batch.map(async (location) => {
     try {
@@ -333,7 +346,7 @@ serve(async (req) => {
 
     const { originLat, originLon, locations } = validation.data;
 
-    console.log(`Processing ${locations.length} locations`);
+    devLog.log(`Processing ${locations.length} locations`);
 
     // Step 1: Pre-filter using Haversine distance (straight-line)
     const MAX_HAVERSINE_DISTANCE_KM = 60;
@@ -350,7 +363,7 @@ serve(async (req) => {
       .filter((loc) => loc.haversineDistance <= MAX_HAVERSINE_DISTANCE_KM)
       .sort((a, b) => a.haversineDistance - b.haversineDistance);
 
-    console.log(
+    devLog.log(
       `Pre-filtered to ${locationsWithHaversine.length} locations within ${MAX_HAVERSINE_DISTANCE_KM}km`
     );
 
@@ -358,7 +371,7 @@ serve(async (req) => {
     const MAX_CANDIDATES = 20;
     const candidates = locationsWithHaversine.slice(0, MAX_CANDIDATES);
 
-    console.log(`Processing ${candidates.length} closest candidates with Table API`);
+    devLog.log(`Processing ${candidates.length} closest candidates with Table API`);
 
     // Step 3: Process in batches using Table API (10 per batch for reliability)
     const BATCH_SIZE = 10;
@@ -369,7 +382,7 @@ serve(async (req) => {
       const batchNum = Math.floor(i / BATCH_SIZE) + 1;
       const totalBatches = Math.ceil(candidates.length / BATCH_SIZE);
       
-      console.log(`Processing batch ${batchNum}/${totalBatches} (${batch.length} locations)`);
+      devLog.log(`Processing batch ${batchNum}/${totalBatches} (${batch.length} locations)`);
 
       const batchResults = await processBatchWithTableAPI(batch, originLat, originLon);
       allResults.push(...batchResults);
@@ -387,13 +400,13 @@ serve(async (req) => {
 
     validResults.sort((a, b) => a.distanceKm - b.distanceKm);
 
-    console.log(`Returning ${validResults.length} valid routes`);
+    devLog.log(`Returning ${validResults.length} valid routes`);
 
     return new Response(JSON.stringify({ routes: validResults }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error processing request:", error);
+    devLog.error("Error processing request:", error);
     return new Response(
       JSON.stringify({ error: "Erro interno do servidor" }),
       {
