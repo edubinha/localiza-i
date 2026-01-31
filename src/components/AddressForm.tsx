@@ -41,8 +41,8 @@ const addressSchema = z.object({
   street: z.string().optional(),
   number: z.string().optional(),
   neighborhood: z.string().optional(),
-  city: z.string().min(2, 'Cidade deve ter pelo menos 2 caracteres'),
-  state: z.string().min(2, 'Selecione um estado'),
+  city: z.string().min(1, 'Campo obrigatório'),
+  state: z.string().min(1, 'Campo obrigatório'),
 });
 
 type AddressFormData = z.infer<typeof addressSchema>;
