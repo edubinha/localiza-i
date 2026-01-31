@@ -1,4 +1,5 @@
 // Geocoding utilities using Nominatim (OpenStreetMap)
+import { devLog } from './logger';
 
 export interface GeocodingResult {
   lat: number;
@@ -85,7 +86,7 @@ async function tryStructuredGeocode(params: {
 
     // Check if the result contains the expected city and state
     if (!displayLower.includes(cityLower) || !displayLower.includes(stateLower)) {
-      console.log(`Structured geocode result doesn't match expected location: ${data[0].display_name}`);
+      devLog.log(`Structured geocode result doesn't match expected location: ${data[0].display_name}`);
       return null;
     }
 
@@ -94,7 +95,7 @@ async function tryStructuredGeocode(params: {
       lon: parseFloat(data[0].lon),
     };
   } catch (error) {
-    console.error('Structured geocoding error:', error);
+    devLog.error('Structured geocoding error:', error);
     return null;
   }
 }
@@ -161,7 +162,7 @@ async function tryFreeTextGeocode(query: string, city?: string, state?: string):
       lon: parseFloat(data[0].lon),
     };
   } catch (error) {
-    console.error('Free-text geocoding error:', error);
+    devLog.error('Free-text geocoding error:', error);
     return null;
   }
 }

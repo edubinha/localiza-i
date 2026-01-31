@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { LocationData } from "./spreadsheet";
+import { devLog } from "./logger";
 
 export interface RouteResult {
   name: string;
@@ -28,7 +29,7 @@ export async function calculateRoutes(
   });
 
   if (error) {
-    console.error("Error calling calculate-routes:", error);
+    devLog.error("Error calling calculate-routes:", error);
     throw new Error("Erro ao calcular rotas. Por favor, tente novamente.");
   }
 

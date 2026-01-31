@@ -3,6 +3,7 @@ import { Upload, FileSpreadsheet, Check, AlertCircle, X, Cloud } from 'lucide-re
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { parseSpreadsheet, parseSpreadsheetText, extractSheetName, type LocationData } from '@/lib/spreadsheet';
+import { devLog } from '@/lib/logger';
 
 interface FileUploadProps {
   onDataLoaded: (data: LocationData[]) => void;
@@ -35,7 +36,7 @@ export function FileUpload({ onDataLoaded, locationsCount }: FileUploadProps) {
           }
         }
       } catch (err) {
-        console.error('Error fetching sheet name:', err);
+        devLog.error('Error fetching sheet name:', err);
       } finally {
         setIsFetchingName(false);
       }
@@ -72,7 +73,7 @@ export function FileUpload({ onDataLoaded, locationsCount }: FileUploadProps) {
         onDataLoaded([]);
       }
     } catch (err) {
-      console.error('Error loading Google Sheet:', err);
+      devLog.error('Error loading Google Sheet:', err);
       setError('Erro ao carregar planilha do Google Sheets. Verifique sua conexão.');
       onDataLoaded([]);
     } finally {

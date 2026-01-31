@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { devLog } from '@/lib/logger';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -117,7 +118,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
 
       setCepError(null);
     } catch (error) {
-      console.error('Error fetching CEP:', error);
+      devLog.error('Error fetching CEP:', error);
       setCepError('Erro ao buscar CEP. Preencha o endereço manualmente.');
     } finally {
       setIsFetchingCep(false);
@@ -196,7 +197,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
 
       onResults(sortedLocations);
     } catch (error) {
-      console.error('Search error:', error);
+      devLog.error('Search error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro ao buscar os locais. Por favor, tente novamente.';
       onError(errorMessage);
     } finally {
