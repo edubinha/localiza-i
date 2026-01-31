@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { MapPin, Navigation, Info, ChevronDown, ChevronUp, FlaskConical } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -114,10 +114,11 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
   );
 }
 
-export function ResultsList({ results, isLoading, error }: ResultsListProps) {
-  if (isLoading) {
-    return (
-      <Card>
+export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
+  function ResultsList({ results, isLoading, error }, ref) {
+    if (isLoading) {
+      return (
+        <Card ref={ref}>
         <CardHeader>
           <CardTitle className="text-lg">Buscando locais...</CardTitle>
         </CardHeader>
@@ -133,7 +134,7 @@ export function ResultsList({ results, isLoading, error }: ResultsListProps) {
 
   if (error) {
     return (
-      <Card className="border-destructive/50">
+      <Card ref={ref} className="border-destructive/50">
         <CardHeader>
           <CardTitle className="text-lg text-destructive">Erro na busca</CardTitle>
         </CardHeader>
@@ -146,7 +147,7 @@ export function ResultsList({ results, isLoading, error }: ResultsListProps) {
 
   if (results.length === 0 && !isLoading && !error) {
     return (
-      <Card>
+      <Card ref={ref}>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Navigation className="h-5 w-5 text-muted-foreground" />
@@ -177,7 +178,7 @@ export function ResultsList({ results, isLoading, error }: ResultsListProps) {
   );
 
   return (
-    <Card>
+    <Card ref={ref}>
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Navigation className="h-5 w-5 text-emerald" />
@@ -208,4 +209,4 @@ export function ResultsList({ results, isLoading, error }: ResultsListProps) {
       </CardContent>
     </Card>
   );
-}
+});
