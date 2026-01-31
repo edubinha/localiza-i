@@ -1,154 +1,73 @@
 
 
-# Plano: Melhorar Validação de Cidade/Estado na Busca Textual
+# Plano: Suporte às Colunas "ID" e "Situação"
 
-## Problema Identificado
+## Objetivo
 
-A função `tryFreeTextGeocode` valida resultados usando `includes()`, que é insuficiente para distinguir bairros homônimos:
-
-```typescript
-// Validação atual (problemática)
-if (displayLower.includes(cityLower) && displayLower.includes(stateLower)) {
-  return result;
-}
-```
-
-### Exemplos de Falhas
-
-| Busca | Resultado Incorreto | Motivo |
-|-------|---------------------|--------|
-| Centro, Campinas, SP | Centro de outra cidade | "Campinas" aparece em outro contexto |
-| Vila Nova, Santos, SP | Vila Nova de cidade diferente | Match parcial no display_name |
+Adicionar suporte às novas colunas "ID" e "Situação" na planilha, filtrando silenciosamente os locais inativos.
 
 ---
 
-## Solução Proposta
+## Alterações
 
-Implementar uma validação mais rigorosa usando a **API de dados estruturados** do Nominatim, que retorna campos separados para cidade e estado através do parâmetro `addressdetails=1`.
+### Arquivo: `src/lib/spreadsheet.ts`
 
-### Mudanças na API
+**1. Adicionar mapeamento da coluna "Situação"**
 
-Adicionar `addressdetails=1` na query para receber:
+Na função `parseRows`, adicionar busca pela coluna de status:
 
-```json
-{
-  "lat": "-23.589",
-  "lon": "-46.636",
-  "display_name": "Vila Mariana, São Paulo, SP, Brasil",
-  "address": {
-    "suburb": "Vila Mariana",
-    "city": "São Paulo",
-    "state": "São Paulo",
-    "country": "Brasil"
+```typescript
+const statusColIndex = findColumn(headers, ['situação', 'situacao', 'status']);
+```
+
+**2. Filtrar locais inativos silenciosamente**
+
+No loop de parsing, antes de processar o nome, verificar o status:
+
+```typescript
+// Check status column - skip inactive locations silently
+if (statusColIndex !== -1) {
+  const statusValue = String(row[statusColIndex] || '').trim().toLowerCase();
+  const normalizedStatus = statusValue.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  // Only include locations with "ativo" status
+  if (normalizedStatus !== 'ativo') {
+    continue;
   }
 }
 ```
 
 ---
 
-## Alterações Técnicas
+### Arquivo: `public/modelo-prestadores.csv`
 
-### Arquivo: `src/lib/geocoding.ts`
+Atualizar estrutura com as novas colunas ID e Situação:
 
-1. **Atualizar interface de resposta**
-   - Adicionar campos de `address` (suburb, city, state, etc.)
-
-2. **Modificar `tryFreeTextGeocode`**
-   - Adicionar `addressdetails=1` na URL
-   - Validar usando campos estruturados em vez de `includes()`
-
-3. **Implementar validação robusta**
-   - Comparar `address.city` diretamente com a cidade informada
-   - Comparar `address.state` diretamente com o estado informado
-   - Normalizar strings para comparação (remover acentos, lowercase)
-
-### Código Proposto
-
-```typescript
-interface NominatimAddress {
-  suburb?: string;
-  neighbourhood?: string;
-  city?: string;
-  town?: string;
-  municipality?: string;
-  state?: string;
-  country?: string;
-}
-
-interface NominatimResponse {
-  lat: string;
-  lon: string;
-  display_name: string;
-  address?: NominatimAddress;
-}
-
-// Função para normalizar strings (remover acentos)
-function normalizeString(str: string): string {
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-}
-
-// Na função tryFreeTextGeocode:
-const url = `...&addressdetails=1`;
-
-// Validação melhorada
-for (const result of data) {
-  if (!result.address) continue;
-  
-  // Nominatim usa diferentes campos para cidade
-  const resultCity = result.address.city || 
-                     result.address.town || 
-                     result.address.municipality;
-  const resultState = result.address.state;
-  
-  if (resultCity && resultState) {
-    const cityMatch = normalizeString(resultCity) === normalizeString(city);
-    const stateMatch = normalizeString(resultState).includes(normalizeString(state));
-    
-    if (cityMatch && stateMatch) {
-      return { lat: parseFloat(result.lat), lon: parseFloat(result.lon) };
-    }
-  }
-}
+```csv
+Nome do local,ID,Situação,CEP,Endereço (logradouro),Número,Bairro,Cidade,Estado (UF),Latitude,Longitude
+Clínica São Lucas,001,Ativo,01310-100,Avenida Paulista,1000,Bela Vista,São Paulo,SP,-23.5505,-46.6333
+...
+Clínica Vida Nova,005,Inativo,02012-000,Rua das Flores,300,Santana,São Paulo,SP,-23.5200,-46.6100
+...
 ```
 
 ---
 
-## Nova Lógica de Validação
+## Comportamento
 
-```text
-1. Busca textual retorna múltiplos resultados
-       |
-       v
-2. Para cada resultado, verifica address.city === cidade informada
-       |
-       v
-3. Verifica address.state contém estado informado
-       |
-       v
-4. Se ambos correspondem, retorna coordenadas
-       |
-       v
-5. Se nenhum corresponde, retorna null (tenta próxima estratégia)
-```
+| Situação | Resultado |
+|----------|-----------|
+| "Ativo" | Incluído na busca |
+| "ativo" | Incluído (case insensitive) |
+| "Inativo" | Ignorado silenciosamente |
+| Célula vazia | Ignorado silenciosamente |
+| Coluna não existe | Todos incluídos (compatibilidade) |
 
 ---
 
-## Comportamento Esperado
+## Notas
 
-| Busca | Antes | Depois |
-|-------|-------|--------|
-| Centro, Campinas, SP | Podia retornar Centro de SP | Retorna Centro de Campinas |
-| Vila Mariana, São Paulo, SP | Funcionava | Continua funcionando |
-| Centro, Santos, SP | Podia confundir | Retorna Centro de Santos |
-
----
-
-## Arquivo a Modificar
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/lib/geocoding.ts` | Adicionar `addressdetails=1`, interface de endereço, validação estruturada |
+- A coluna "ID" será ignorada (não precisa de mapeamento)
+- Locais inativos não serão mencionados na mensagem de sucesso
+- A mensagem mostrará apenas os locais ativos carregados
 
