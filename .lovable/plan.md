@@ -1,114 +1,113 @@
 
-# Plano: Nome Dinâmico da Planilha via Célula A1
+# Plano: Corrigir Geocodificacao para Bairros Homonimos
 
-## Resumo
+## Problema Identificado
 
-Implementar a leitura dinâmica do nome da planilha a partir da célula A1 do CSV exportado pelo Google Sheets. O nome lido será exibido tanto no botão de importação quanto após a planilha ser carregada.
+A funcao `tryGeocode` em `src/lib/geocoding.ts` usa apenas o parametro `q=` (busca textual livre) do Nominatim. Isso causa ambiguidade quando bairros com o mesmo nome existem em cidades diferentes (ex: "Centro" em Sao Paulo vs "Centro" em Campinas).
 
----
+Atualmente, a validacao e feita apenas verificando se o nome da cidade aparece no `display_name` retornado, o que nao e 100% confiavel.
 
-## Estrutura Atual da Planilha
+## Solucao Proposta
 
-A planilha agora possui a seguinte estrutura:
-
-| Linha | Conteúdo |
-|-------|----------|
-| 1 | Nome da planilha (ex: "Prestadores CONNAPA - Atualizado JAN-2026") |
-| 2 | Cabeçalhos das colunas |
-| 3+ | Dados dos prestadores |
+Usar a **API de busca estruturada** do Nominatim, que permite especificar parametros separados para rua, cidade, estado e pais. Isso garante que a busca seja restrita a localidade correta.
 
 ---
 
-## Alterações Necessárias
+## Alteracoes Tecnicas
 
-### 1. Atualizar Parser CSV (`src/lib/spreadsheet.ts`)
+### Arquivo: `src/lib/geocoding.ts`
 
-- Modificar a função `parseSpreadsheetText` para:
-  - Extrair o nome da planilha da primeira linha (célula A1)
-  - Ajustar o índice dos cabeçalhos para a linha 2
-  - Ajustar o índice dos dados para a linha 3+
-  - Retornar o nome extraído junto com os dados
+1. **Criar nova funcao `tryStructuredGeocode`**
+   - Usa parametros estruturados: `street`, `city`, `state`, `country`
+   - Nao mistura com `q=` (o Nominatim nao permite combinacao)
 
-- Atualizar a interface `ParseResult` para incluir:
-```text
-sheetName?: string  // Nome extraído da célula A1
-```
+2. **Atualizar estrategia de fallback**
+   - Priorizar busca estruturada
+   - Manter busca textual como fallback de ultimo recurso
 
-### 2. Atualizar Componente de Upload (`src/components/FileUpload.tsx`)
-
-- Modificar a função `handleLoadFromGoogleSheets` para:
-  - Primeiro, buscar o CSV e extrair apenas o nome (linha 1)
-  - Exibir esse nome no botão dinamicamente
-  - Após carregamento completo, usar o nome extraído
-
-- Adicionar um estado para armazenar o nome dinâmico:
-```text
-const [sheetName, setSheetName] = useState<string | null>(null);
-```
-
-- Fazer uma requisição inicial (ao montar o componente) para buscar apenas o nome
-
-### 3. Fluxo de Funcionamento
+### Nova Estrutura de Fallback
 
 ```text
-1. Componente monta
-       |
-       v
-2. Busca CSV do Google Sheets (requisição leve)
-       |
-       v
-3. Extrai nome da linha 1
-       |
-       v
-4. Atualiza botão com nome dinâmico
-       |
-       v
-5. Usuário clica no botão
-       |
-       v
-6. Processa dados (linhas 2+)
-       |
-       v
-7. Exibe nome no card de confirmação
+Estrategia 1: Busca estruturada com rua + numero + cidade + estado
+     |
+     v (se falhar)
+Estrategia 2: Busca estruturada com rua + cidade + estado (sem numero)
+     |
+     v (se falhar)
+Estrategia 3: Busca estruturada com bairro + cidade + estado
+     |
+     v (se falhar)
+Estrategia 4: Busca estruturada apenas cidade + estado
+     |
+     v (se falhar)
+Estrategia 5: Busca textual livre (fallback final)
 ```
 
 ---
 
-## Detalhes Técnicos
+## Exemplo de URL Estruturada
 
-### Modificações em `spreadsheet.ts`
+Formato atual (problematico):
+```text
+/search?q=Centro, Campinas, Sao Paulo, Brasil
+```
 
-1. Nova interface de retorno com campo `sheetName`
-2. Função `parseRows` ajustada para receber offset de linha inicial
-3. Função auxiliar `extractSheetName(csvText)` para extração rápida do nome
+Novo formato (estruturado):
+```text
+/search?street=Centro&city=Campinas&state=Sao Paulo&country=Brasil
+```
 
-### Modificações em `FileUpload.tsx`
+---
 
-1. Hook `useEffect` para buscar o nome ao carregar a página
-2. Estado `sheetName` para armazenar o nome dinâmico
-3. Fallback para nome padrão caso a requisição falhe
-4. Atualização do botão e do card de confirmação para usar `sheetName`
+## Codigo Proposto
+
+```typescript
+async function tryStructuredGeocode(params: {
+  street?: string;
+  city: string;
+  state: string;
+  country?: string;
+}): Promise<{ lat: number; lon: number } | null> {
+  const searchParams = new URLSearchParams({
+    format: 'json',
+    limit: '1',
+    countrycodes: 'br',
+  });
+  
+  if (params.street) searchParams.set('street', params.street);
+  searchParams.set('city', params.city);
+  searchParams.set('state', params.state);
+  if (params.country) searchParams.set('country', params.country);
+  
+  const url = `https://nominatim.openstreetmap.org/search?${searchParams}`;
+  // ... fetch and return result
+}
+```
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/lib/geocoding.ts` | Adicionar funcao de busca estruturada e atualizar fluxo de fallback |
 
 ---
 
 ## Comportamento Esperado
 
-| Situação | Comportamento |
-|----------|---------------|
-| Página carrega | Botão mostra "Carregando..." brevemente, depois exibe o nome da A1 |
-| Nome na A1 alterado | Próxima visita à página mostra o novo nome |
-| Falha na requisição | Mostra nome padrão ("Planilha CONNAPA") |
-| Upload manual de arquivo | Continua funcionando normalmente (sem nome dinâmico) |
+| Situacao | Antes | Depois |
+|----------|-------|--------|
+| Bairro "Centro" em Campinas-SP | Podia retornar Centro de outra cidade | Retorna exatamente Centro de Campinas-SP |
+| Bairro "Jardim America" em duas cidades | Ambiguidade | Usa cidade/estado para desambiguar |
+| Endereco nao encontrado | Erro | Tenta fallback estruturado antes de falhar |
 
 ---
 
-## Arquivos a Serem Modificados
+## Validacao Adicional
 
-- `src/lib/spreadsheet.ts` - Adicionar extração de nome e ajustar parsing
-- `src/components/FileUpload.tsx` - Implementar busca dinâmica do nome
+Apos receber o resultado, validar que:
+1. A cidade retornada corresponde a cidade solicitada
+2. O estado retornado corresponde ao estado solicitado
 
----
-
-## Próximos Passos
-
-Após aprovação, implementarei as alterações para que o nome definido na célula A1 da sua planilha Google Sheets seja automaticamente refletido na aplicação, tanto no botão quanto no card de confirmação após a importação.
+Se a validacao falhar, tentar a proxima estrategia de fallback.
