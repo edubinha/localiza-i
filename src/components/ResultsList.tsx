@@ -179,7 +179,7 @@ export function ResultsList({ results, isLoading, error }: ResultsListProps) {
           <ResultItem key={`${result.name}-${index}`} result={result} index={index} />
         ))}
         <p className="text-xs text-muted-foreground text-center pt-2">
-          Distância e tempo estimados por rota de carro
+          Distância estimada por rota de carro. Valores aproximados com margem de erro de até 1km.
         </p>
       </CardContent>
     </Card>

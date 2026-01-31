@@ -136,9 +136,6 @@ export function FileUpload({ onDataLoaded, locationsCount }: FileUploadProps) {
                 <p className="text-xs text-muted-foreground">
                   Formatos aceitos: CSV, Excel (.xlsx, .xls)
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Colunas necessárias: Nome do local, Latitude, Longitude
-                </p>
               </>
             )}
           </div>
