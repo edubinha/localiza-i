@@ -40,31 +40,55 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
     <div
       className="flex flex-col gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
     >
-      <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-navy/10 flex items-center justify-center">
-          <span className="font-bold text-navy">{index + 1}</span>
+      <div className="flex items-start gap-3 sm:gap-4">
+        <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-navy/10 flex items-center justify-center">
+          <span className="font-bold text-navy text-sm sm:text-base">{index + 1}</span>
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="font-medium text-foreground truncate">{result.name}</h3>
+          <div className="flex items-start gap-2">
+            <h3 className="font-medium text-foreground text-sm sm:text-base leading-tight">{result.name}</h3>
             {isLaboratory && (
-              <FlaskConical className="h-4 w-4 text-blue-600 flex-shrink-0" />
+              <FlaskConical className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
             )}
           </div>
           {locationSummary && (
-            <p className="text-sm text-muted-foreground truncate">{locationSummary}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{locationSummary}</p>
           )}
-          <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4 text-emerald" />
-            <span className="font-medium text-emerald">{result.formattedDistance}</span>
+          <div className="flex items-center justify-between mt-1.5 sm:mt-1">
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4 text-emerald" />
+              <span className="font-medium text-emerald">{result.formattedDistance}</span>
+            </div>
+            {/* Mobile: button inline with distance, Desktop: button on the right */}
+            {hasAddressDetails && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFullAddress(!showFullAddress)}
+                className="sm:hidden h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+              >
+                {showFullAddress ? (
+                  <>
+                    <ChevronUp className="h-3.5 w-3.5 mr-1" />
+                    Ocultar
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-3.5 w-3.5 mr-1" />
+                    Endereço
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
+        {/* Desktop only: button on the right side */}
         {hasAddressDetails && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setShowFullAddress(!showFullAddress)}
-            className="flex-shrink-0 text-muted-foreground hover:text-foreground"
+            className="hidden sm:flex flex-shrink-0 text-muted-foreground hover:text-foreground"
           >
             {showFullAddress ? (
               <>
@@ -81,7 +105,7 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
         )}
       </div>
       {showFullAddress && fullAddress && (
-        <div className="ml-14 p-3 rounded-md bg-background border text-sm">
+        <div className="ml-11 sm:ml-14 p-3 rounded-md bg-background border text-xs sm:text-sm">
           <span className="font-medium">Endereço: </span>
           {fullAddress}
         </div>
