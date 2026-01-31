@@ -277,29 +277,28 @@ export function FileUpload({ onDataLoaded, locationsCount }: FileUploadProps) {
                 <Upload className="h-12 w-12 text-muted-foreground mb-4" />
                 <p className="font-medium mb-1">Arraste sua planilha aqui</p>
                 <p className="text-sm text-muted-foreground mb-4">ou clique para selecionar</p>
-                <p className="text-xs text-muted-foreground mb-6">
+                <p className="text-xs text-muted-foreground">
                   Formatos aceitos: CSV, Excel (.xlsx, .xls)
                 </p>
-                
-                {/* Google Sheets card */}
-                <div className="border-t border-border pt-4 w-full">
-                  <p className="text-xs text-muted-foreground mb-3">Ou use a planilha recomendada:</p>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleLoadFromGoogleSheets();
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md transition-colors mx-auto"
-                  >
-                    <Cloud className="h-4 w-4 text-emerald" />
-                    <span className="text-sm font-medium">Prestadores CONNAPA - Atualizado</span>
-                  </button>
-                </div>
               </>
             )}
           </div>
         </div>
+
+        {/* Google Sheets card - outside the drop zone */}
+        {!isLoaded && !isLoading && (
+          <div className="border-t border-border pt-4 mt-4">
+            <p className="text-xs text-muted-foreground mb-3 text-center">Ou use a planilha recomendada:</p>
+            <button
+              type="button"
+              onClick={handleLoadFromGoogleSheets}
+              className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md transition-colors mx-auto"
+            >
+              <Cloud className="h-4 w-4 text-emerald" />
+              <span className="text-sm font-medium">Prestadores CONNAPA - Atualizado</span>
+            </button>
+          </div>
+        )}
 
         {error && (
           <div className={`mt-4 p-3 rounded-md flex items-start gap-2 ${isLoaded ? 'bg-amber-50 text-amber-800' : 'bg-destructive/10 text-destructive'}`}>
