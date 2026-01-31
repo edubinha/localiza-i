@@ -1,43 +1,37 @@
 
-# Plano: Corrigir Geocodificacao para Bairros Homonimos
+# Plano: Corrigir Geocodificacao de Bairros
 
 ## Problema Identificado
 
-A funcao `tryGeocode` em `src/lib/geocoding.ts` usa apenas o parametro `q=` (busca textual livre) do Nominatim. Isso causa ambiguidade quando bairros com o mesmo nome existem em cidades diferentes (ex: "Centro" em Sao Paulo vs "Centro" em Campinas).
+Quando o usuario digita apenas o bairro (ex: "Vila Mariana") sem rua, a logica atual tenta usar o bairro no campo `street` da API Nominatim. Isso falha porque:
 
-Atualmente, a validacao e feita apenas verificando se o nome da cidade aparece no `display_name` retornado, o que nao e 100% confiavel.
+1. Nominatim nao reconhece bairros no parametro `street`
+2. O fallback vai para "cidade + estado", retornando o centro de Sao Paulo
+3. Os resultados mostram prestadores proximos ao centro da cidade, nao do bairro
 
-## Solucao Proposta
-
-Usar a **API de busca estruturada** do Nominatim, que permite especificar parametros separados para rua, cidade, estado e pais. Isso garante que a busca seja restrita a localidade correta.
+Quando o CEP e usado, funciona porque o ViaCEP preenche a rua automaticamente.
 
 ---
 
-## Alteracoes Tecnicas
+## Solucao Proposta
 
-### Arquivo: `src/lib/geocoding.ts`
+Adicionar uma nova estrategia de busca textual especifica para bairros, ANTES de cair no fallback de cidade/estado. A busca textual livre do Nominatim consegue encontrar bairros quando formatados corretamente.
 
-1. **Criar nova funcao `tryStructuredGeocode`**
-   - Usa parametros estruturados: `street`, `city`, `state`, `country`
-   - Nao mistura com `q=` (o Nominatim nao permite combinacao)
-
-2. **Atualizar estrategia de fallback**
-   - Priorizar busca estruturada
-   - Manter busca textual como fallback de ultimo recurso
-
-### Nova Estrutura de Fallback
+### Nova Ordem de Fallback
 
 ```text
-Estrategia 1: Busca estruturada com rua + numero + cidade + estado
+Estrategia 1: Estruturada (Rua + Numero + Cidade + Estado)
      |
      v (se falhar)
-Estrategia 2: Busca estruturada com rua + cidade + estado (sem numero)
+Estrategia 2: Estruturada (Rua + Cidade + Estado)
      |
      v (se falhar)
-Estrategia 3: Busca estruturada com bairro + cidade + estado
+Estrategia 3: Busca textual para BAIRRO (Nova!)
+              Query: "Vila Mariana, Sao Paulo, Sao Paulo, Brasil"
+              Validacao: confirma cidade/estado no resultado
      |
      v (se falhar)
-Estrategia 4: Busca estruturada apenas cidade + estado
+Estrategia 4: Estruturada (Cidade + Estado)
      |
      v (se falhar)
 Estrategia 5: Busca textual livre (fallback final)
@@ -45,69 +39,69 @@ Estrategia 5: Busca textual livre (fallback final)
 
 ---
 
-## Exemplo de URL Estruturada
+## Alteracoes Tecnicas
 
-Formato atual (problematico):
-```text
-/search?q=Centro, Campinas, Sao Paulo, Brasil
-```
+### Arquivo: `src/lib/geocoding.ts`
 
-Novo formato (estruturado):
-```text
-/search?street=Centro&city=Campinas&state=Sao Paulo&country=Brasil
-```
+1. **Remover a Estrategia 3 atual** (bairro como `street`)
+   - Esta abordagem nao funciona com o Nominatim
 
----
+2. **Adicionar nova Estrategia 3** - Busca textual para bairro
+   - Usar `tryFreeTextGeocode` com query: `"bairro, cidade, estado, Brasil"`
+   - Validar que o resultado contem a cidade e estado corretos
+   - Isso permite encontrar bairros como entidades geograficas
 
-## Codigo Proposto
+3. **Ajustar mensagem de `searchUsed`**
+   - Informar ao usuario quando a busca foi feita pelo bairro
+
+### Codigo Proposto
 
 ```typescript
-async function tryStructuredGeocode(params: {
-  street?: string;
-  city: string;
-  state: string;
-  country?: string;
-}): Promise<{ lat: number; lon: number } | null> {
-  const searchParams = new URLSearchParams({
-    format: 'json',
-    limit: '1',
-    countrycodes: 'br',
-  });
-  
-  if (params.street) searchParams.set('street', params.street);
-  searchParams.set('city', params.city);
-  searchParams.set('state', params.state);
-  if (params.country) searchParams.set('country', params.country);
-  
-  const url = `https://nominatim.openstreetmap.org/search?${searchParams}`;
-  // ... fetch and return result
+// Estrategia 3: Busca textual para bairro (nao estruturada)
+// Nominatim encontra bairros melhor em busca livre
+if (!result && neighborhood) {
+  const neighborhoodQuery = `${neighborhood}, ${city}, ${state}, Brasil`;
+  result = await tryFreeTextGeocode(neighborhoodQuery, city, state);
+  if (result) {
+    searchUsed = 'bairro (busca textual)';
+  }
 }
 ```
 
 ---
 
-## Arquivos a Modificar
+## Por Que Isso Funciona
+
+A API Nominatim tem dois modos:
+- **Estruturada**: campos separados (street, city, state) - bom para enderecos
+- **Textual livre**: query unica (q=) - melhor para localidades como bairros
+
+Bairros brasileiros sao mapeados no OpenStreetMap como `place=suburb` ou `place=neighbourhood`, e a busca textual consegue encontra-los quando combinados com cidade/estado.
+
+---
+
+## Exemplo de Funcionamento
+
+| Campo preenchido | Antes | Depois |
+|------------------|-------|--------|
+| Bairro: Vila Mariana, Cidade: Sao Paulo | Retornava centro de SP | Retorna coordenadas da Vila Mariana |
+| Bairro: Centro, Cidade: Campinas | Retornava centro de SP | Retorna centro de Campinas |
+| Apenas Cidade: Sao Paulo | Retorna centro de SP | Comportamento mantido |
+
+---
+
+## Arquivo a Modificar
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/lib/geocoding.ts` | Adicionar funcao de busca estruturada e atualizar fluxo de fallback |
+| `src/lib/geocoding.ts` | Substituir Estrategia 3 por busca textual de bairro |
 
 ---
 
-## Comportamento Esperado
+## Validacao
 
-| Situacao | Antes | Depois |
-|----------|-------|--------|
-| Bairro "Centro" em Campinas-SP | Podia retornar Centro de outra cidade | Retorna exatamente Centro de Campinas-SP |
-| Bairro "Jardim America" em duas cidades | Ambiguidade | Usa cidade/estado para desambiguar |
-| Endereco nao encontrado | Erro | Tenta fallback estruturado antes de falhar |
-
----
-
-## Validacao Adicional
-
-Apos receber o resultado, validar que:
-1. A cidade retornada corresponde a cidade solicitada
-2. O estado retornado corresponde ao estado solicitado
-
-Se a validacao falhar, tentar a proxima estrategia de fallback.
+Apos a alteracao, a busca textual para bairro:
+1. Monta query: `"Vila Mariana, Sao Paulo, Sao Paulo, Brasil"`
+2. Busca no Nominatim com `q=` (busca livre)
+3. Valida se o resultado contem "sao paulo" na cidade E no estado
+4. Retorna coordenadas do bairro Vila Mariana (~-23.589, -46.636)
