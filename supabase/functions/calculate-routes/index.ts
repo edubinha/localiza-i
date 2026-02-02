@@ -207,72 +207,69 @@ function sleep(ms: number): Promise<void> {
 interface DistanceMatrixResult {
   distances: (number | null)[];
   durations: (number | null)[];
-  source: "google" | "osrm";
+  source: "ors" | "osrm";
 }
 
 /**
- * Use Google Distance Matrix API for accurate driving distances and durations.
- * Requires GOOGLE_GEOCODING_API_KEY secret (also works for Distance Matrix API).
+ * Use OpenRouteService Matrix API for accurate driving distances and durations.
+ * Requires OPENROUTESERVICE_API_KEY secret.
  */
-async function getGoogleDistanceMatrix(
+async function getOpenRouteServiceMatrix(
   originLat: number,
   originLon: number,
   destinations: { lat: number; lon: number }[]
 ): Promise<DistanceMatrixResult | null> {
-  const apiKey = Deno.env.get("GOOGLE_GEOCODING_API_KEY");
+  const apiKey = Deno.env.get("OPENROUTESERVICE_API_KEY");
   
   if (!apiKey) {
-    devLog.error("GOOGLE_GEOCODING_API_KEY not configured");
+    devLog.error("OPENROUTESERVICE_API_KEY not configured");
     return null;
   }
 
   try {
-    // Build destinations string: lat,lon|lat,lon|...
-    const destinationsStr = destinations
-      .map((d) => `${d.lat},${d.lon}`)
-      .join("|");
+    // ORS uses [lon, lat] format
+    const locations = [
+      [originLon, originLat],
+      ...destinations.map((d) => [d.lon, d.lat]),
+    ];
 
-    const url = new URL("https://maps.googleapis.com/maps/api/distancematrix/json");
-    url.searchParams.set("origins", `${originLat},${originLon}`);
-    url.searchParams.set("destinations", destinationsStr);
-    url.searchParams.set("mode", "driving");
-    url.searchParams.set("language", "pt-BR");
-    url.searchParams.set("key", apiKey);
+    // Sources: index 0 (origin)
+    // Destinations: all other indices
+    const destinationIndices = destinations.map((_, i) => i + 1);
 
-    const response = await fetch(url.toString());
+    const response = await fetch("https://api.openrouteservice.org/v2/matrix/driving-car", {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        locations,
+        sources: [0],
+        destinations: destinationIndices,
+        metrics: ["distance", "duration"],
+      }),
+    });
 
     if (!response.ok) {
-      devLog.error(`Google Distance Matrix API error: ${response.status}`);
+      const errorText = await response.text();
+      devLog.error(`OpenRouteService Matrix API error: ${response.status} - ${errorText}`);
       return null;
     }
 
     const data = await response.json();
 
-    if (data.status !== "OK") {
-      devLog.error("Google Distance Matrix API returned error:", data.status, data.error_message);
-      return null;
-    }
+    // ORS returns distances in meters and durations in seconds
+    // distances[0] = distances from source 0 to all destinations
+    // durations[0] = durations from source 0 to all destinations
+    const distances = data.distances?.[0] || [];
+    const durations = data.durations?.[0] || [];
 
-    // Extract distances and durations from the response
-    const elements = data.rows?.[0]?.elements || [];
-    const distances: (number | null)[] = [];
-    const durations: (number | null)[] = [];
+    devLog.log(`OpenRouteService Matrix: ${distances.filter((d: number | null) => d !== null).length}/${destinations.length} routes calculated`);
 
-    for (const element of elements) {
-      if (element.status === "OK") {
-        distances.push(element.distance?.value ?? null); // meters
-        durations.push(element.duration?.value ?? null); // seconds
-      } else {
-        distances.push(null);
-        durations.push(null);
-      }
-    }
-
-    devLog.log(`Google Distance Matrix: ${distances.filter(d => d !== null).length}/${destinations.length} routes calculated`);
-
-    return { distances, durations, source: "google" };
+    return { distances, durations, source: "ors" };
   } catch (error) {
-    devLog.error("Google Distance Matrix API error:", error);
+    devLog.error("OpenRouteService Matrix API error:", error);
     return null;
   }
 }
@@ -330,7 +327,7 @@ async function getOSRMTableDistances(
 
 /**
  * Process a batch of locations using Distance Matrix APIs
- * Tries Google first, then OSRM Table, then individual OSRM requests
+ * Tries OpenRouteService first, then OSRM Table, then individual OSRM requests
  */
 async function processBatchWithTableAPI(
   batch: Location[],
@@ -342,12 +339,12 @@ async function processBatchWithTableAPI(
     lon: loc.longitude,
   }));
 
-  // Try Google Distance Matrix first (more accurate)
-  let matrixResult = await getGoogleDistanceMatrix(originLat, originLon, destinations);
+  // Try OpenRouteService Matrix first (accurate, requires API key)
+  let matrixResult = await getOpenRouteServiceMatrix(originLat, originLon, destinations);
   
-  // Fallback to OSRM if Google fails
+  // Fallback to OSRM if ORS fails
   if (!matrixResult) {
-    devLog.log("Google Distance Matrix failed, falling back to OSRM");
+    devLog.log("OpenRouteService failed, falling back to OSRM");
     matrixResult = await getOSRMTableDistances(originLat, originLon, destinations);
   }
 

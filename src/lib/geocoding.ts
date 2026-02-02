@@ -1,47 +1,10 @@
-// Geocoding utilities - Google Geocoding API with Nominatim fallback
+// Geocoding utilities - Nominatim (OpenStreetMap) exclusive
 import { devLog } from './logger';
-import { supabase } from '@/integrations/supabase/client';
 
 export interface GeocodingResult {
   lat: number;
   lon: number;
   searchUsed: string; // Describes what search strategy was used
-}
-
-/**
- * Try Google Geocoding API via Edge Function (more accurate)
- */
-async function tryGoogleGeocode(params: {
-  street: string;
-  number: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-}): Promise<GeocodingResult | null> {
-  try {
-    const { data, error } = await supabase.functions.invoke('geocode-address', {
-      body: params,
-    });
-
-    if (error) {
-      devLog.error('Google Geocoding edge function error:', error);
-      return null;
-    }
-
-    if (data?.lat && data?.lon) {
-      return {
-        lat: data.lat,
-        lon: data.lon,
-        searchUsed: data.searchUsed || 'Google Geocoding',
-      };
-    }
-
-    devLog.log('Google Geocoding returned no results');
-    return null;
-  } catch (error) {
-    devLog.error('Google Geocoding fetch error:', error);
-    return null;
-  }
 }
 
 interface NominatimAddress {
@@ -221,28 +184,10 @@ export async function geocodeAddress(
     return geocodingCache.get(cacheKey)!;
   }
 
-  // Strategy 1: Try Google Geocoding API first (most accurate)
-  const googleResult = await tryGoogleGeocode({
-    street,
-    number,
-    neighborhood,
-    city,
-    state,
-  });
-
-  if (googleResult) {
-    devLog.log('Google Geocoding success:', googleResult.searchUsed);
-    geocodingCache.set(cacheKey, googleResult);
-    return googleResult;
-  }
-
-  devLog.log('Google Geocoding failed, falling back to Nominatim');
-
-  // Fallback: Use Nominatim strategies
   let result: { lat: number; lon: number } | null = null;
   let searchUsed = '';
 
-  // Strategy 2 & 3: Run Nominatim in parallel when we have street and number
+  // Strategy 1 & 2: Run Nominatim in parallel when we have street and number
   if (street && number) {
     const streetWithNumber = `${number} ${street}`;
     
@@ -280,7 +225,7 @@ export async function geocodeAddress(
     }
   }
 
-  // Strategy 4: Free-text search for neighborhood
+  // Strategy 3: Free-text search for neighborhood
   if (!result && neighborhood) {
     const neighborhoodQuery = `${neighborhood}, ${city}, ${state}, Brasil`;
     result = await tryFreeTextGeocode(neighborhoodQuery, city, state);
@@ -289,7 +234,7 @@ export async function geocodeAddress(
     }
   }
 
-  // Strategy 5: Structured search with city + state only
+  // Strategy 4: Structured search with city + state only
   if (!result) {
     result = await tryStructuredGeocode({
       city,
@@ -301,7 +246,7 @@ export async function geocodeAddress(
     }
   }
 
-  // Strategy 6: Free-text fallback as last resort
+  // Strategy 5: Free-text fallback as last resort
   if (!result) {
     const freeTextQuery = `${neighborhood}, ${city}, ${state}, Brasil`;
     result = await tryFreeTextGeocode(freeTextQuery, city, state);
