@@ -1,206 +1,232 @@
 
 
-# Plano: Implementar Google Geocoding API
+# Plano: Substituir OSRM pela Google Distance Matrix API
 
 ## Visao Geral
 
-Substituir o Nominatim pelo Google Geocoding API para maior precisao na conversao de enderecos em coordenadas, mantendo o Nominatim como fallback gratuito.
+Substituir o servico de calculo de rotas OSRM (OpenStreetMap) pela Google Distance Matrix API para obter distancias e tempos de viagem mais precisos e atualizados.
+
+---
+
+## Problema Atual
+
+| Aspecto | OSRM (Atual) | Impacto |
+|---------|--------------|---------|
+| Dados de mapa | OpenStreetMap (pode estar desatualizado) | Rotas imprecisas |
+| Trafego | Nao considera | Tempos irreais |
+| Atualizacao | Depende de contribuicoes voluntarias | Mapas incompletos |
+| Cobertura BR | Boa, mas inconsistente | Areas com dados antigos |
+
+---
+
+## Solucao Proposta
+
+Usar a Google Distance Matrix API que oferece:
+
+| Aspecto | Google Distance Matrix |
+|---------|------------------------|
+| Dados de mapa | Google Maps (atualizados constantemente) |
+| Trafego | Opcional (tempo real ou historico) |
+| Precisao | Alta, especialmente em areas urbanas |
+| Cobertura BR | Excelente |
 
 ---
 
 ## Arquitetura Proposta
 
 ```text
-Endereco do Usuario
+Frontend (routing.ts)
         |
         v
-+-------------------+
-| Google Geocoding  |  <-- Primeira tentativa (mais preciso)
-+-------------------+
++----------------------------+
+| Edge Function              |
+| calculate-routes           |
++----------------------------+
         |
-    +---+---+
-    |       |
- Sucesso  Falha/Erro
-    |       |
-    v       v
- Retorna  +-------------------+
- coords   | Nominatim         |  <-- Fallback gratuito
-          | (codigo atual)    |
-          +-------------------+
-                  |
-                  v
-              Retorna coords
-              ou null
-```
-
----
-
-## Configuracao da API Key
-
-### Passo 1: Adicionar Secret
-
-A API key sera armazenada de forma segura no Lovable Cloud como um secret chamado `GOOGLE_GEOCODING_API_KEY`.
-
-Voce precisara:
-1. Acessar o Google Cloud Console
-2. Habilitar a Geocoding API
-3. Criar uma API key (recomendo restringir por dominio)
-4. Informar a key quando solicitado
-
-### Passo 2: Edge Function para Geocoding
-
-Para proteger a API key (nao expor no frontend), criaremos uma Edge Function:
-
-| Aspecto | Detalhe |
-|---------|---------|
-| Nome | geocode-address |
-| Metodo | POST |
-| Input | { street, number, neighborhood, city, state } |
-| Output | { lat, lon, searchUsed } ou erro |
-
----
-
-## Mudancas no Codigo
-
-### Nova Edge Function: supabase/functions/geocode-address/index.ts
-
-```text
-POST /geocode-address
-Body: { street, number, neighborhood, city, state }
-
-1. Monta endereco completo
-2. Chama Google Geocoding API
-3. Valida resultado (cidade/estado corretos)
-4. Retorna coordenadas
-```
-
-### Atualizacao: src/lib/geocoding.ts
-
-```text
-geocodeAddress()
-    |
-    v
-Tenta Edge Function (Google)
-    |
+        v
++----------------------------+
+| Google Distance Matrix API |  <-- Novo servico
+| (usando GOOGLE_GEOCODING_  |
+|  API_KEY existente)        |
++----------------------------+
+        |
     +---+---+
     |       |
  Sucesso  Falha
     |       |
     v       v
- Retorna  Usa Nominatim
- coords   (codigo atual)
+ Retorna  +-------------------+
+ rotas    | OSRM              |  <-- Fallback gratuito
+          | (codigo atual)    |
+          +-------------------+
 ```
 
 ---
 
-## Comparacao: Google vs Nominatim
+## Limites da API
 
-| Aspecto | Google Geocoding | Nominatim |
-|---------|------------------|-----------|
-| Precisao | Alta (nivel numero) | Media (nivel rua) |
-| Custo | $5 por 1000 requisicoes | Gratuito |
-| Rate Limit | 50 req/segundo | 1 req/segundo |
-| Cobertura BR | Excelente | Boa |
-| Disponibilidade | 99.9% SLA | Sem SLA |
+A Google Distance Matrix API tem limites importantes:
 
----
+| Limite | Valor |
+|--------|-------|
+| Maximo de destinos por requisicao | 25 |
+| Maximo de elementos (origens x destinos) | 100 |
+| Taxa | $5 por 1000 elementos |
 
-## Estrategia de Fallback
-
-Para otimizar custos e garantir disponibilidade:
-
-1. **Primeira tentativa**: Google Geocoding API
-   - Mais preciso
-   - Resposta rapida
-
-2. **Fallback**: Nominatim (codigo atual)
-   - Se Google falhar (erro de rede, quota excedida)
-   - Gratuito, sem custo adicional
-
-3. **Cache em memoria**: Mantido
-   - Evita requisicoes duplicadas
-   - Funciona para ambos os servicos
+**Estrategia de Otimizacao:**
+1. Pre-filtrar com Haversine (distancia em linha reta) - ja implementado
+2. Enviar apenas os 20-25 mais proximos para Google
+3. Usar OSRM como fallback se Google falhar
 
 ---
 
-## Arquivos a Criar/Modificar
+## Comparacao de Custos
 
-| Arquivo | Acao | Descricao |
-|---------|------|-----------|
-| supabase/functions/geocode-address/index.ts | CRIAR | Edge Function com Google API |
-| src/lib/geocoding.ts | MODIFICAR | Adicionar chamada a Edge Function |
+| Cenario | OSRM | Google Distance Matrix |
+|---------|------|------------------------|
+| 100 buscas/dia | Gratuito | ~$3/mes |
+| 500 buscas/dia | Gratuito | ~$15/mes |
+| 1000 buscas/dia | Gratuito | ~$30/mes |
 
----
-
-## Seguranca
-
-| Aspecto | Implementacao |
-|---------|---------------|
-| API Key | Armazenada como secret no Lovable Cloud |
-| Exposicao | Key nunca exposta no frontend |
-| Validacao | Edge Function valida origem da requisicao |
-| Rate Limit | Controlado pelo Google (50/s) |
+*Considerando 20 destinos por busca = 20 elementos*
 
 ---
 
-## Exemplo de Resposta Google Geocoding
+## Mudancas no Codigo
+
+### Arquivo: supabase/functions/calculate-routes/index.ts
+
+**Modificacoes:**
+
+1. Adicionar funcao `getGoogleDistanceMatrix()` para chamar a API do Google
+2. Modificar `processBatchWithTableAPI()` para tentar Google primeiro
+3. Manter OSRM como fallback automatico
+4. Usar a mesma `GOOGLE_GEOCODING_API_KEY` (funciona para Distance Matrix)
+
+### Nenhuma alteracao necessaria no frontend
+
+O arquivo `src/lib/routing.ts` permanece inalterado - a Edge Function ja retorna o mesmo formato de dados.
+
+---
+
+## Detalhes Tecnicos
+
+### Requisicao Google Distance Matrix
+
+```text
+GET https://maps.googleapis.com/maps/api/distancematrix/json
+  ?origins=-23.550520,-46.633308
+  &destinations=-23.563987,-46.654106|-23.557842,-46.660429
+  &mode=driving
+  &language=pt-BR
+  &key=API_KEY
+```
+
+### Resposta Esperada
 
 ```json
 {
-  "results": [{
-    "geometry": {
-      "location": {
-        "lat": -23.5505199,
-        "lng": -46.6333094
+  "rows": [{
+    "elements": [
+      {
+        "status": "OK",
+        "distance": { "value": 3542, "text": "3.5 km" },
+        "duration": { "value": 720, "text": "12 min" }
       },
-      "location_type": "ROOFTOP"
-    },
-    "address_components": [
-      { "types": ["street_number"], "long_name": "123" },
-      { "types": ["route"], "long_name": "Avenida Paulista" },
-      { "types": ["sublocality"], "long_name": "Bela Vista" },
-      { "types": ["administrative_area_level_2"], "long_name": "Sao Paulo" },
-      { "types": ["administrative_area_level_1"], "long_name": "SP" }
+      {
+        "status": "OK",
+        "distance": { "value": 5123, "text": "5.1 km" },
+        "duration": { "value": 1080, "text": "18 min" }
+      }
     ]
   }],
   "status": "OK"
 }
 ```
 
-O campo `location_type: "ROOFTOP"` indica precisao maxima (nivel do edificio).
+---
+
+## Fluxo de Processamento
+
+```text
+1. Receber requisicao com origem + ate 100 locais
+          |
+          v
+2. Pre-filtrar: Haversine <= 60km, ordenar por distancia
+          |
+          v
+3. Selecionar os 25 mais proximos
+          |
+          v
+4. Chamar Google Distance Matrix API
+          |
+      +---+---+
+      |       |
+   Sucesso  Falha/Erro
+      |       |
+      v       v
+5. Retornar   Fallback para OSRM
+   resultados (codigo atual mantido)
+```
+
+---
+
+## Vantagens do Fallback
+
+| Situacao | Comportamento |
+|----------|---------------|
+| Google funciona | Usa Google (mais preciso) |
+| Quota Google excedida | Usa OSRM automaticamente |
+| Erro de rede Google | Usa OSRM automaticamente |
+| API Key invalida | Usa OSRM automaticamente |
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Acao | Descricao |
+|---------|------|-----------|
+| supabase/functions/calculate-routes/index.ts | MODIFICAR | Adicionar integracao com Google Distance Matrix, manter OSRM como fallback |
+
+---
+
+## Seguranca
+
+| Aspecto | Status |
+|---------|--------|
+| API Key | Ja configurada (GOOGLE_GEOCODING_API_KEY) |
+| Exposicao | Key protegida na Edge Function |
+| CORS | Ja configurado corretamente |
 
 ---
 
 ## Resumo de Implementacao
 
-### Fase 1: Configuracao
-1. Solicitar API key ao usuario
-2. Armazenar como secret `GOOGLE_GEOCODING_API_KEY`
+### Fase 1: Modificar Edge Function
+1. Adicionar funcao `getGoogleDistanceMatrix()`
+2. Integrar com o fluxo existente
+3. Manter OSRM como fallback
 
-### Fase 2: Edge Function
-1. Criar `geocode-address` Edge Function
-2. Implementar chamada a Google Geocoding API
-3. Validar resposta (cidade/estado)
+### Fase 2: Testes
+1. Comparar resultados Google vs OSRM
+2. Verificar precisao em enderecos conhecidos
+3. Testar comportamento de fallback
 
-### Fase 3: Integracao
-1. Atualizar `src/lib/geocoding.ts`
-2. Chamar Edge Function primeiro
-3. Manter Nominatim como fallback
-
-### Fase 4: Testes
-1. Testar enderecos conhecidos
-2. Comparar precisao com Nominatim
-3. Validar fallback funciona
+### Fase 3: Monitoramento
+1. Verificar logs para confirmar uso do Google
+2. Monitorar custos no Google Cloud Console
 
 ---
 
-## Custos Estimados
+## Nota Importante
 
-| Volume Mensal | Custo Google | Com Fallback |
-|---------------|--------------|--------------|
-| 1.000 buscas | ~$5 | ~$5 |
-| 5.000 buscas | ~$25 | ~$20* |
-| 10.000 buscas | ~$50 | ~$40* |
+A mesma API key usada para Geocoding (`GOOGLE_GEOCODING_API_KEY`) funciona para a Distance Matrix API, desde que ela esteja habilitada no Google Cloud Console.
 
-*Cache reduz requisicoes duplicadas em ~20%
+**Voce precisara verificar:**
+1. Acesse o Google Cloud Console
+2. Navegue ate APIs e Servicos > Biblioteca
+3. Procure por "Distance Matrix API"
+4. Certifique-se de que esta **Habilitada**
+
+Se nao estiver habilitada, basta clicar em "Habilitar" - a mesma API key funcionara.
 
