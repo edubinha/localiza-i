@@ -26,17 +26,20 @@ export default function Login() {
     setError(null);
 
     try {
-      const { data, error: dbError } = await supabase
-        .from('empresas')
-        .select('id, nome, access_key, google_sheets_url, is_active')
-        .eq('access_key', accessKey.trim())
-        .eq('is_active', true)
-        .single();
+      // Use edge function for secure validation - no direct DB access
+      const { data: responseData, error: fnError } = await supabase.functions.invoke('validate-empresa', {
+        body: {
+          action: 'validate',
+          access_key: accessKey.trim(),
+        },
+      });
 
-      if (dbError || !data) {
+      if (fnError || !responseData?.success || !responseData?.empresa) {
         setError('Chave de acesso inválida. Verifique e tente novamente.');
         return;
       }
+
+      const data = responseData.empresa;
 
       // Store empresa in context (without admin_secret for security)
       setEmpresa({
