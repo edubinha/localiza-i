@@ -16,6 +16,9 @@ export default function Admin() {
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   
+  // Store admin secret in memory only (not sessionStorage) for security
+  const [validatedAdminSecret, setValidatedAdminSecret] = useState<string | null>(null);
+  
   const [googleSheetsUrl, setGoogleSheetsUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isTestingSheet, setIsTestingSheet] = useState(false);
@@ -63,8 +66,9 @@ export default function Admin() {
         return;
       }
 
-      setAdminValidated(true, adminSecret.trim()); // Pass the secret for storage
-      setAdminSecret(''); // Clear the secret from component state
+      setAdminValidated(true);
+      setValidatedAdminSecret(adminSecret.trim()); // Store in memory only
+      setAdminSecret(''); // Clear the input field
     } catch (err) {
       console.error('Admin validation error:', err);
       setValidationError('Erro ao validar código. Tente novamente.');
@@ -145,15 +149,23 @@ export default function Admin() {
     setIsSaving(true);
 
     try {
-      // Get admin_secret from sessionStorage for authorization
-      const adminSecretStored = sessionStorage.getItem('localiz_admin_secret');
+      // Use admin secret from memory (not sessionStorage) for security
+      if (!validatedAdminSecret) {
+        toast({
+          title: 'Sessão expirada',
+          description: 'Por favor, faça login novamente na área administrativa.',
+          variant: 'destructive',
+        });
+        setAdminValidated(false);
+        return;
+      }
       
       // Use edge function for secure update - no direct DB access
       const { data: responseData, error: fnError } = await supabase.functions.invoke('validate-empresa', {
         body: {
           action: 'update-settings',
           empresa_id: empresa?.id,
-          admin_secret: adminSecretStored,
+          admin_secret: validatedAdminSecret,
           google_sheets_url: googleSheetsUrl.trim(),
         },
       });
