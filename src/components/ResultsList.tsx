@@ -1,5 +1,5 @@
 import { useState, forwardRef } from 'react';
-import { MapPin, Navigation, Info, ChevronDown, ChevronUp, FlaskConical } from 'lucide-react';
+import { MapPin, Navigation, Info, ChevronDown, ChevronUp, FlaskConical, Clock, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -28,6 +28,25 @@ function formatFullAddress(address?: string, number?: string, neighborhood?: str
   return parts.join(' - ');
 }
 
+function buildGoogleMapsUrl(result: SearchResult): string {
+  const destination = formatFullAddress(
+    result.address,
+    result.number,
+    result.neighborhood,
+    result.city,
+    result.state
+  );
+  
+  const origin = result.originAddress || '';
+  
+  // URL for Google Maps directions
+  const baseUrl = 'https://www.google.com/maps/dir/';
+  const encodedOrigin = encodeURIComponent(origin);
+  const encodedDestination = encodeURIComponent(destination + ', Brasil');
+  
+  return `${baseUrl}${encodedOrigin}/${encodedDestination}`;
+}
+
 function ResultItem({ result, index }: { result: SearchResult; index: number }) {
   const [showFullAddress, setShowFullAddress] = useState(false);
   
@@ -35,6 +54,11 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
   const fullAddress = formatFullAddress(result.address, result.number, result.neighborhood, result.city, result.state);
   const hasAddressDetails = result.address || result.neighborhood || result.city;
   const isLaboratory = result.name.toLowerCase().startsWith('laboratório');
+
+  const handleOpenGoogleMaps = () => {
+    const url = buildGoogleMapsUrl(result);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div
@@ -55,9 +79,17 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{locationSummary}</p>
           )}
           <div className="flex items-center justify-between mt-1.5 sm:mt-1">
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4 text-emerald" />
-              <span className="font-medium text-emerald">{result.formattedDistance}</span>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <MapPin className="h-4 w-4 text-emerald" />
+                <span className="font-medium text-emerald">{result.formattedDistance}</span>
+              </div>
+              {result.formattedDuration && (
+                <div className="flex items-center gap-1">
+                  <Clock className="h-4 w-4 text-navy" />
+                  <span className="font-medium text-navy">{result.formattedDuration}</span>
+                </div>
+              )}
             </div>
             {/* Mobile: button inline with distance, Desktop: button on the right */}
             {hasAddressDetails && (
@@ -105,9 +137,20 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
         )}
       </div>
       {showFullAddress && fullAddress && (
-        <div className="ml-11 sm:ml-14 p-3 rounded-md bg-background border text-xs sm:text-sm">
-          <span className="font-medium">Endereço: </span>
-          {fullAddress}
+        <div className="ml-11 sm:ml-14 p-3 rounded-md bg-background border text-xs sm:text-sm space-y-3">
+          <div>
+            <span className="font-medium">Endereço: </span>
+            {fullAddress}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleOpenGoogleMaps}
+            className="w-full sm:w-auto"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Abrir no Google Maps
+          </Button>
         </div>
       )}
     </div>
@@ -151,12 +194,12 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Navigation className="h-5 w-5 text-muted-foreground" />
-            Nenhum prestador encontrado
+            Nenhuma clínica encontrada
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center py-6">
           <p className="text-muted-foreground mb-2">
-            Não foi localizado nenhum prestador dentro do raio de 40km.
+            Não foi localizada nenhuma clínica dentro do raio de 40km.
           </p>
           <p className="text-sm text-emerald font-medium">
             Mas não se preocupe! É possível solicitar um credenciamento à CONNAPA.
@@ -182,7 +225,7 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Navigation className="h-5 w-5 text-emerald" />
-          Locais mais próximos
+          Clínicas mais próximas
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">

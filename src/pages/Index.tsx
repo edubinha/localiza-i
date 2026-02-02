@@ -103,11 +103,11 @@ const Index = () => {
         <div className="max-w-2xl mx-auto space-y-6">
           {/* Introduction */}
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              Encontre o local mais próximo para seu exame ou de seu colaborador!
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-2">
+              Onde encontrar ficou fácil.
             </h2>
             <p className="text-muted-foreground">
-              Busque os prestadores mais próximos do endereço informado.
+              Localize clínicas de saúde ocupacional próximas de você, de forma rápida e precisa.
             </p>
           </div>
 
