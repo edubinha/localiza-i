@@ -13,7 +13,7 @@ interface EmpresaContextType {
   isLoading: boolean;
   isAdminValidated: boolean;
   setEmpresa: (empresa: Empresa | null) => void;
-  setAdminValidated: (validated: boolean) => void;
+  setAdminValidated: (validated: boolean, adminSecret?: string) => void;
   logout: () => void;
 }
 
@@ -53,16 +53,22 @@ export function EmpresaProvider({ children }: { children: React.ReactNode }) {
     } else {
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(ADMIN_KEY);
+      sessionStorage.removeItem('localiz_admin_secret');
       setIsAdminValidated(false);
     }
   }, []);
 
-  const setAdminValidated = useCallback((validated: boolean) => {
+  const setAdminValidated = useCallback((validated: boolean, adminSecret?: string) => {
     setIsAdminValidated(validated);
     if (validated) {
       sessionStorage.setItem(ADMIN_KEY, 'true');
+      // Store admin_secret temporarily for authorized operations
+      if (adminSecret) {
+        sessionStorage.setItem('localiz_admin_secret', adminSecret);
+      }
     } else {
       sessionStorage.removeItem(ADMIN_KEY);
+      sessionStorage.removeItem('localiz_admin_secret');
     }
   }, []);
 
@@ -71,6 +77,7 @@ export function EmpresaProvider({ children }: { children: React.ReactNode }) {
     setIsAdminValidated(false);
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(ADMIN_KEY);
+    sessionStorage.removeItem('localiz_admin_secret');
   }, []);
 
   return (

@@ -49,21 +49,22 @@ export default function Admin() {
     setValidationError(null);
 
     try {
-      // Validate admin_secret server-side
-      const { data, error } = await supabase
-        .from('empresas')
-        .select('id')
-        .eq('id', empresa?.id)
-        .eq('admin_secret', adminSecret.trim())
-        .single();
+      // Validate admin_secret via edge function - no direct DB access
+      const { data: responseData, error: fnError } = await supabase.functions.invoke('validate-empresa', {
+        body: {
+          action: 'admin-validate',
+          empresa_id: empresa?.id,
+          admin_secret: adminSecret.trim(),
+        },
+      });
 
-      if (error || !data) {
+      if (fnError || !responseData?.success) {
         setValidationError('Código administrativo inválido.');
         return;
       }
 
-      setAdminValidated(true);
-      setAdminSecret(''); // Clear the secret from state
+      setAdminValidated(true, adminSecret.trim()); // Pass the secret for storage
+      setAdminSecret(''); // Clear the secret from component state
     } catch (err) {
       console.error('Admin validation error:', err);
       setValidationError('Erro ao validar código. Tente novamente.');
@@ -144,13 +145,21 @@ export default function Admin() {
     setIsSaving(true);
 
     try {
-      const { error } = await supabase
-        .from('empresas')
-        .update({ google_sheets_url: googleSheetsUrl.trim() })
-        .eq('id', empresa?.id);
+      // Get admin_secret from sessionStorage for authorization
+      const adminSecretStored = sessionStorage.getItem('localiz_admin_secret');
+      
+      // Use edge function for secure update - no direct DB access
+      const { data: responseData, error: fnError } = await supabase.functions.invoke('validate-empresa', {
+        body: {
+          action: 'update-settings',
+          empresa_id: empresa?.id,
+          admin_secret: adminSecretStored,
+          google_sheets_url: googleSheetsUrl.trim(),
+        },
+      });
 
-      if (error) {
-        throw error;
+      if (fnError || !responseData?.success) {
+        throw new Error('Failed to update settings');
       }
 
       // Update local context
