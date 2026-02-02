@@ -14,7 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      empresas: {
+        Row: {
+          access_key: string
+          admin_secret: string
+          created_at: string | null
+          google_sheets_url: string | null
+          id: string
+          is_active: boolean | null
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          access_key: string
+          admin_secret: string
+          created_at?: string | null
+          google_sheets_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          access_key?: string
+          admin_secret?: string
+          created_at?: string | null
+          google_sheets_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
