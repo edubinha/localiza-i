@@ -1,360 +1,206 @@
 
 
-# Plano: Reestruturação Multi-Tenant LocalizAI
+# Plano: Implementar Google Geocoding API
 
 ## Visao Geral
 
-Transformar o LocalizAI em um produto SaaS B2B com isolamento completo de dados entre empresas, mantendo intacta toda a logica de busca por endereco existente.
+Substituir o Nominatim pelo Google Geocoding API para maior precisao na conversao de enderecos em coordenadas, mantendo o Nominatim como fallback gratuito.
 
 ---
 
 ## Arquitetura Proposta
 
 ```text
-+------------------+     +-------------------+     +------------------+
-|   Tela de Login  |     |   Interface       |     |   Tela Admin     |
-|   (Access Key)   | --> |   Principal       | --> |   (Admin Secret) |
-+------------------+     +-------------------+     +------------------+
-         |                       |                         |
-         v                       v                         v
-+------------------------------------------------------------------------+
-|                        Contexto da Empresa                             |
-|   - empresa_id (UUID)                                                  |
-|   - nome da empresa                                                    |
-|   - google_sheets_url                                                  |
-+------------------------------------------------------------------------+
-         |
-         v
-+------------------+     +-------------------+     +------------------+
-|   Google Sheets  | --> |   Parse/Validate  | --> |   Busca Locais   |
-|   (Vinculado)    |     |   CSV             |     |   (Inalterado)   |
-+------------------+     +-------------------+     +------------------+
-```
-
----
-
-## Estrutura do Banco de Dados
-
-### Tabela: empresas
-
-| Coluna | Tipo | Descricao |
-|--------|------|-----------|
-| id | UUID (PK) | Identificador unico interno |
-| nome | TEXT | Nome da empresa exibido na interface |
-| access_key | TEXT (UNIQUE) | Chave de acesso para usuarios |
-| admin_secret | TEXT | Codigo secreto para administracao |
-| google_sheets_url | TEXT | Link publico da planilha Google Sheets |
-| is_active | BOOLEAN | Empresa ativa/inativa |
-| created_at | TIMESTAMPTZ | Data de criacao |
-| updated_at | TIMESTAMPTZ | Data de atualizacao |
-
-### SQL de Criacao
-
-```sql
-CREATE TABLE public.empresas (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nome TEXT NOT NULL,
-  access_key TEXT NOT NULL UNIQUE,
-  admin_secret TEXT NOT NULL,
-  google_sheets_url TEXT,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Habilitar RLS
-ALTER TABLE public.empresas ENABLE ROW LEVEL SECURITY;
-
--- Politica: Leitura publica para validacao de access_key
-CREATE POLICY "Allow public read for access validation"
-  ON public.empresas
-  FOR SELECT
-  USING (true);
-
--- Trigger para atualizar updated_at
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER empresas_updated_at
-  BEFORE UPDATE ON public.empresas
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at();
-```
-
----
-
-## Fluxo de Acesso
-
-### 1. Tela de Login (Access Key)
-
-```text
-Usuario acessa o site
+Endereco do Usuario
         |
         v
 +-------------------+
-| Tela de Acesso    |
-| [   Access Key  ] |
-| [   Entrar      ] |
+| Google Geocoding  |  <-- Primeira tentativa (mais preciso)
 +-------------------+
         |
-        v
-Valida access_key no banco
-        |
     +---+---+
     |       |
- Valida   Invalida
+ Sucesso  Falha/Erro
     |       |
     v       v
-Armazena   Exibe erro
-empresa    "Chave invalida"
-em sessao
-    |
-    v
-Redireciona para
-interface principal
+ Retorna  +-------------------+
+ coords   | Nominatim         |  <-- Fallback gratuito
+          | (codigo atual)    |
+          +-------------------+
+                  |
+                  v
+              Retorna coords
+              ou null
 ```
 
-### 2. Interface Principal
+---
 
-- Header exibe nome da empresa ativa
-- Campos de endereco: **INALTERADOS**
-- Remove opcao de upload manual
-- Carrega planilha automaticamente do google_sheets_url
+## Configuracao da API Key
 
-### 3. Tela de Configuracoes (Admin)
+### Passo 1: Adicionar Secret
 
-- Acesso via rota /admin
-- Exige validacao de admin_secret
-- Permite editar google_sheets_url
-- Permite visualizar informacoes da empresa
+A API key sera armazenada de forma segura no Lovable Cloud como um secret chamado `GOOGLE_GEOCODING_API_KEY`.
+
+Voce precisara:
+1. Acessar o Google Cloud Console
+2. Habilitar a Geocoding API
+3. Criar uma API key (recomendo restringir por dominio)
+4. Informar a key quando solicitado
+
+### Passo 2: Edge Function para Geocoding
+
+Para proteger a API key (nao expor no frontend), criaremos uma Edge Function:
+
+| Aspecto | Detalhe |
+|---------|---------|
+| Nome | geocode-address |
+| Metodo | POST |
+| Input | { street, number, neighborhood, city, state } |
+| Output | { lat, lon, searchUsed } ou erro |
 
 ---
 
-## Novas Paginas e Componentes
+## Mudancas no Codigo
 
-### Paginas
-
-| Arquivo | Funcao |
-|---------|--------|
-| src/pages/Login.tsx | Tela de acesso com campo de chave |
-| src/pages/Admin.tsx | Tela de configuracoes da empresa |
-
-### Componentes
-
-| Arquivo | Funcao |
-|---------|--------|
-| src/components/EmpresaHeader.tsx | Header com nome da empresa |
-| src/components/AdminKeyDialog.tsx | Dialog para validar admin_secret |
-
-### Contexto
-
-| Arquivo | Funcao |
-|---------|--------|
-| src/contexts/EmpresaContext.tsx | Gerencia estado da empresa ativa |
-
-### Hooks
-
-| Arquivo | Funcao |
-|---------|--------|
-| src/hooks/useEmpresa.ts | Hook para acessar contexto da empresa |
-
----
-
-## Alteracoes em Arquivos Existentes
-
-### src/App.tsx
-
-- Envolver app com EmpresaProvider
-- Adicionar rotas /login e /admin
-- Implementar protecao de rotas
-
-### src/pages/Index.tsx
-
-- Remover FileUpload
-- Usar google_sheets_url da empresa ativa
-- Carregar planilha automaticamente ao montar
-
-### src/components/Header.tsx
-
-- Exibir nome da empresa ao lado do logo
-- Adicionar botao de configuracoes (visivel apenas com contexto admin)
-
----
-
-## Validacao da Planilha Google Sheets
-
-### Funcao: validateGoogleSheetsUrl
+### Nova Edge Function: supabase/functions/geocode-address/index.ts
 
 ```text
-Input: URL do Google Sheets
-        |
-        v
-Extrai ID da planilha
-        |
-        v
-Monta URL de exportacao CSV
-        |
-        v
-Fetch do CSV
-        |
-    +---+---+
-    |       |
-  OK     Erro
-    |       |
-    v       v
-Parse    Retorna erro
-colunas  "Planilha inacessivel"
-    |
-    v
-Valida colunas obrigatorias:
-- nome_clinica OU nome do local
-- latitude
-- longitude
-    |
-    +---+---+
-    |       |
- Validas  Invalidas
-    |       |
-    v       v
-Retorna   Retorna erro
-sucesso   com colunas faltantes
+POST /geocode-address
+Body: { street, number, neighborhood, city, state }
+
+1. Monta endereco completo
+2. Chama Google Geocoding API
+3. Valida resultado (cidade/estado corretos)
+4. Retorna coordenadas
 ```
 
-### Colunas Obrigatorias
+### Atualizacao: src/lib/geocoding.ts
 
-A validacao sera flexivel para aceitar os nomes de colunas ja existentes no sistema:
-
-| Campo | Nomes Aceitos |
-|-------|---------------|
-| Nome | nome do local, nome, local, name, nome_clinica |
-| Latitude | latitude, lat |
-| Longitude | longitude, lon, long, lng |
+```text
+geocodeAddress()
+    |
+    v
+Tenta Edge Function (Google)
+    |
+    +---+---+
+    |       |
+ Sucesso  Falha
+    |       |
+    v       v
+ Retorna  Usa Nominatim
+ coords   (codigo atual)
+```
 
 ---
 
-## Edge Function: validate-empresa
+## Comparacao: Google vs Nominatim
 
-Nova Edge Function para validar acesso e carregar dados da empresa:
+| Aspecto | Google Geocoding | Nominatim |
+|---------|------------------|-----------|
+| Precisao | Alta (nivel numero) | Media (nivel rua) |
+| Custo | $5 por 1000 requisicoes | Gratuito |
+| Rate Limit | 50 req/segundo | 1 req/segundo |
+| Cobertura BR | Excelente | Boa |
+| Disponibilidade | 99.9% SLA | Sem SLA |
 
-### Endpoints
+---
 
-| Metodo | Path | Funcao |
-|--------|------|--------|
-| POST | /validate | Valida access_key e retorna dados da empresa |
-| POST | /admin-validate | Valida admin_secret para acesso admin |
-| PUT | /update-settings | Atualiza google_sheets_url (requer admin) |
+## Estrategia de Fallback
+
+Para otimizar custos e garantir disponibilidade:
+
+1. **Primeira tentativa**: Google Geocoding API
+   - Mais preciso
+   - Resposta rapida
+
+2. **Fallback**: Nominatim (codigo atual)
+   - Se Google falhar (erro de rede, quota excedida)
+   - Gratuito, sem custo adicional
+
+3. **Cache em memoria**: Mantido
+   - Evita requisicoes duplicadas
+   - Funciona para ambos os servicos
+
+---
+
+## Arquivos a Criar/Modificar
+
+| Arquivo | Acao | Descricao |
+|---------|------|-----------|
+| supabase/functions/geocode-address/index.ts | CRIAR | Edge Function com Google API |
+| src/lib/geocoding.ts | MODIFICAR | Adicionar chamada a Edge Function |
 
 ---
 
 ## Seguranca
 
-### Armazenamento de Sessao
-
-- Usar sessionStorage para empresa_id e admin_validated
-- Limpar ao fechar aba/navegador
-- Nao armazenar admin_secret no cliente
-
-### Validacao Server-Side
-
-- Todas operacoes admin validam admin_secret no servidor
-- Edge Function valida antes de permitir alteracoes
-- RLS protege dados no banco
-
-### Proteção de Credenciais
-
-- access_key: usado apenas para identificar empresa
-- admin_secret: nunca exposto no cliente apos validacao
-- Hashes podem ser implementados futuramente para maior seguranca
+| Aspecto | Implementacao |
+|---------|---------------|
+| API Key | Armazenada como secret no Lovable Cloud |
+| Exposicao | Key nunca exposta no frontend |
+| Validacao | Edge Function valida origem da requisicao |
+| Rate Limit | Controlado pelo Google (50/s) |
 
 ---
 
-## Arquivos Nao Alterados
+## Exemplo de Resposta Google Geocoding
 
-Os seguintes arquivos permanecem **100% inalterados**:
+```json
+{
+  "results": [{
+    "geometry": {
+      "location": {
+        "lat": -23.5505199,
+        "lng": -46.6333094
+      },
+      "location_type": "ROOFTOP"
+    },
+    "address_components": [
+      { "types": ["street_number"], "long_name": "123" },
+      { "types": ["route"], "long_name": "Avenida Paulista" },
+      { "types": ["sublocality"], "long_name": "Bela Vista" },
+      { "types": ["administrative_area_level_2"], "long_name": "Sao Paulo" },
+      { "types": ["administrative_area_level_1"], "long_name": "SP" }
+    ]
+  }],
+  "status": "OK"
+}
+```
 
-| Arquivo | Motivo |
-|---------|--------|
-| src/components/AddressForm.tsx | Logica de endereco intacta |
-| src/lib/geocoding.ts | Geocodificacao inalterada |
-| src/lib/routing.ts | Calculo de rotas inalterado |
-| src/lib/haversine.ts | Calculo de distancia inalterado |
-| src/components/ResultsList.tsx | Exibicao de resultados inalterada |
-| supabase/functions/calculate-routes | Edge function inalterada |
+O campo `location_type: "ROOFTOP"` indica precisao maxima (nivel do edificio).
 
 ---
 
 ## Resumo de Implementacao
 
-### Fase 1: Banco de Dados
+### Fase 1: Configuracao
+1. Solicitar API key ao usuario
+2. Armazenar como secret `GOOGLE_GEOCODING_API_KEY`
 
-1. Criar tabela empresas com RLS
-2. Inserir empresa de teste para desenvolvimento
+### Fase 2: Edge Function
+1. Criar `geocode-address` Edge Function
+2. Implementar chamada a Google Geocoding API
+3. Validar resposta (cidade/estado)
 
-### Fase 2: Contexto e Autenticacao
+### Fase 3: Integracao
+1. Atualizar `src/lib/geocoding.ts`
+2. Chamar Edge Function primeiro
+3. Manter Nominatim como fallback
 
-1. Criar EmpresaContext
-2. Criar pagina de Login
-3. Implementar protecao de rotas
-
-### Fase 3: Interface Principal
-
-1. Adaptar Index.tsx para carregar planilha automatica
-2. Remover FileUpload da interface
-3. Atualizar Header com nome da empresa
-
-### Fase 4: Administracao
-
-1. Criar pagina Admin
-2. Criar dialog de validacao admin_secret
-3. Implementar edicao de google_sheets_url
-
-### Fase 5: Validacao e Edge Functions
-
-1. Criar Edge Function validate-empresa
-2. Implementar validacao de planilha
-3. Testes end-to-end
+### Fase 4: Testes
+1. Testar enderecos conhecidos
+2. Comparar precisao com Nominatim
+3. Validar fallback funciona
 
 ---
 
-## Estrutura Final de Arquivos
+## Custos Estimados
 
-```text
-src/
-├── contexts/
-│   └── EmpresaContext.tsx       [NOVO]
-├── hooks/
-│   ├── use-mobile.tsx
-│   ├── use-toast.ts
-│   └── useEmpresa.ts            [NOVO]
-├── pages/
-│   ├── Index.tsx                [MODIFICADO]
-│   ├── Login.tsx                [NOVO]
-│   ├── Admin.tsx                [NOVO]
-│   └── NotFound.tsx
-├── components/
-│   ├── AddressForm.tsx          [INALTERADO]
-│   ├── ResultsList.tsx          [INALTERADO]
-│   ├── Header.tsx               [MODIFICADO]
-│   ├── EmpresaHeader.tsx        [NOVO]
-│   ├── AdminKeyDialog.tsx       [NOVO]
-│   └── FileUpload.tsx           [REMOVIDO DA UI]
-├── lib/
-│   ├── geocoding.ts             [INALTERADO]
-│   ├── routing.ts               [INALTERADO]
-│   ├── haversine.ts             [INALTERADO]
-│   ├── spreadsheet.ts           [INALTERADO]
-│   └── empresa.ts               [NOVO - utils]
-└── App.tsx                      [MODIFICADO]
+| Volume Mensal | Custo Google | Com Fallback |
+|---------------|--------------|--------------|
+| 1.000 buscas | ~$5 | ~$5 |
+| 5.000 buscas | ~$25 | ~$20* |
+| 10.000 buscas | ~$50 | ~$40* |
 
-supabase/
-├── functions/
-│   ├── calculate-routes/        [INALTERADO]
-│   └── validate-empresa/        [NOVO]
-└── config.toml                  [ATUALIZADO]
-```
+*Cache reduz requisicoes duplicadas em ~20%
 
