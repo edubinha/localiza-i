@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEmpresa } from '@/hooks/useEmpresa';
 import { Button } from '@/components/ui/button';
 import { Settings, LogOut } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 export function Header() {
   const { empresa, logout } = useEmpresa();
@@ -17,10 +18,7 @@ export function Header() {
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-extrabold tracking-tight">
-              <span className="text-[#1a2744]">Localiz</span>
-              <span className="text-[#00b4b4]">AI</span>
-            </h1>
+            <img src={logo} alt="LocalizAI" className="h-8" />
             {empresa && (
               <>
                 <span className="text-muted-foreground">|</span>
