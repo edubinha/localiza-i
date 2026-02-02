@@ -5,6 +5,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Input validation constants
+const MAX_STRING_LENGTH = 200;
+const MIN_STRING_LENGTH = 1;
+
 interface GeocodeRequest {
   street: string;
   number: string;
@@ -32,6 +36,16 @@ interface GoogleGeocodeResponse {
   results: GoogleGeocodeResult[];
   status: string;
   error_message?: string;
+}
+
+// Sanitize and validate string input
+function sanitizeString(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, MAX_STRING_LENGTH);
+}
+
+function isValidStringLength(value: string, minLen: number = 0, maxLen: number = MAX_STRING_LENGTH): boolean {
+  return value.length >= minLen && value.length <= maxLen;
 }
 
 // Normalize strings for comparison (remove accents, lowercase)
@@ -91,12 +105,26 @@ serve(async (req) => {
       );
     }
 
-    const body: GeocodeRequest = await req.json();
-    const { street, number, neighborhood, city, state } = body;
+    const rawBody = await req.json();
+    
+    // Sanitize all string inputs
+    const street = sanitizeString(rawBody.street);
+    const number = sanitizeString(rawBody.number);
+    const neighborhood = sanitizeString(rawBody.neighborhood);
+    const city = sanitizeString(rawBody.city);
+    const state = sanitizeString(rawBody.state);
 
-    if (!city || !state) {
+    // Validate required fields
+    if (!city || !isValidStringLength(city, MIN_STRING_LENGTH)) {
       return new Response(
-        JSON.stringify({ error: 'City and state are required' }),
+        JSON.stringify({ error: 'City is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (!state || !isValidStringLength(state, MIN_STRING_LENGTH)) {
+      return new Response(
+        JSON.stringify({ error: 'State is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

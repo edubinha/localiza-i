@@ -13,13 +13,33 @@ const devLog = {
   },
 };
 
-// Allowed origins for CORS - restrict to your domains
-const ALLOWED_ORIGINS = [
-  "https://id-preview--dd0f1f18-b3a6-40c0-a96b-4abaaca86b05.lovable.app",
-  "https://lovable.dev",
-  "http://localhost:5173",
-  "http://localhost:8080",
-];
+// CORS configuration - uses dynamic origin matching for Lovable domains
+// In production, this matches *.lovable.app and *.lovableproject.com domains
+const LOVABLE_DOMAIN_PATTERNS = ['.lovable.app', '.lovableproject.com'];
+const DEV_ORIGINS = ['http://localhost:5173', 'http://localhost:8080'];
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  
+  // Check development origins
+  if (DEV_ORIGINS.includes(origin)) {
+    return true;
+  }
+  
+  // Check Lovable production domains
+  return LOVABLE_DOMAIN_PATTERNS.some(pattern => origin.endsWith(pattern));
+}
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  // Only allow known origins, deny unknown ones
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : null;
+  
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin || '',
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+}
 
 // Constants for validation
 const MAX_LOCATIONS = 100;
@@ -27,18 +47,7 @@ const MAX_LATITUDE = 90;
 const MIN_LATITUDE = -90;
 const MAX_LONGITUDE = 180;
 const MIN_LONGITUDE = -180;
-
-function getCorsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.some(allowed => 
-    origin === allowed || origin.endsWith('.lovable.app') || origin.endsWith('.lovableproject.com')
-  ) ? origin : ALLOWED_ORIGINS[0];
-  
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-  };
-}
+const MAX_STRING_LENGTH = 200; // Maximum length for string fields
 
 interface Location {
   name: string;
@@ -82,15 +91,40 @@ function isValidCoordinate(lat: number, lon: number): boolean {
   );
 }
 
+// Sanitize and validate string fields
+function sanitizeString(value: unknown, maxLength: number = MAX_STRING_LENGTH): string {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, maxLength);
+}
+
 function isValidLocation(loc: unknown): loc is Location {
   if (typeof loc !== "object" || loc === null) return false;
   const location = loc as Record<string, unknown>;
-  return (
-    typeof location.name === "string" &&
-    typeof location.latitude === "number" &&
-    typeof location.longitude === "number" &&
-    isValidCoordinate(location.latitude, location.longitude)
-  );
+  
+  // Validate required fields
+  if (typeof location.name !== "string" || location.name.length === 0 || location.name.length > MAX_STRING_LENGTH) {
+    return false;
+  }
+  
+  if (typeof location.latitude !== "number" || typeof location.longitude !== "number") {
+    return false;
+  }
+  
+  if (!isValidCoordinate(location.latitude, location.longitude)) {
+    return false;
+  }
+  
+  // Validate optional string fields length
+  const optionalStrings = ['address', 'number', 'neighborhood', 'city', 'state'];
+  for (const field of optionalStrings) {
+    if (location[field] !== undefined && location[field] !== null) {
+      if (typeof location[field] !== 'string' || (location[field] as string).length > MAX_STRING_LENGTH) {
+        return false;
+      }
+    }
+  }
+  
+  return true;
 }
 
 function validateRequest(body: unknown): { valid: true; data: RouteRequest } | { valid: false; error: string } {
