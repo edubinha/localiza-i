@@ -227,7 +227,7 @@ export default function Admin() {
                   onChange={(e) => setAdminSecret(e.target.value)}
                   disabled={isValidating}
                   autoFocus
-                  className="pr-10 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
+                  className="pr-10 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden [&::-webkit-credentials-auto-fill-button]:hidden [&::-webkit-textfield-decoration-container]:hidden [&::-webkit-clear-button]:hidden"
                 />
                 <button
                   type="button"
