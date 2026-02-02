@@ -350,7 +350,28 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                 )}
               />
 
-              {/* State Field - Before City for autocomplete dependency */}
+              {/* City Field with Autocomplete */}
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cidade</FormLabel>
+                    <FormControl>
+                      <CityAutocomplete
+                        value={field.value}
+                        onChange={field.onChange}
+                        stateCode={selectedState}
+                        disabled={isDisabled}
+                        placeholder="Ex: São Paulo"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* State Field */}
               <FormField
                 control={form.control}
                 name="state"
@@ -379,27 +400,6 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* City Field with Autocomplete */}
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cidade</FormLabel>
-                    <FormControl>
-                      <CityAutocomplete
-                        value={field.value}
-                        onChange={field.onChange}
-                        stateCode={selectedState}
-                        disabled={isDisabled}
-                        placeholder="Ex: São Paulo"
-                      />
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

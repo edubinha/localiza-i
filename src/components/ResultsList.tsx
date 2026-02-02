@@ -1,5 +1,5 @@
 import { useState, forwardRef } from 'react';
-import { MapPin, Navigation, Info, ChevronDown, ChevronUp, FlaskConical, Clock, ExternalLink } from 'lucide-react';
+import { MapPin, Navigation, Info, ChevronDown, ChevronUp, FlaskConical, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -79,17 +79,9 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{locationSummary}</p>
           )}
           <div className="flex items-center justify-between mt-1.5 sm:mt-1">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <MapPin className="h-4 w-4 text-emerald" />
-                <span className="font-medium text-emerald">{result.formattedDistance}</span>
-              </div>
-              {result.formattedDuration && (
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4 text-navy" />
-                  <span className="font-medium text-navy">{result.formattedDuration}</span>
-                </div>
-              )}
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4 text-emerald" />
+              <span className="font-medium text-emerald">{result.formattedDistance}</span>
             </div>
             {/* Mobile: button inline with distance, Desktop: button on the right */}
             {hasAddressDetails && (
@@ -198,11 +190,8 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center py-6">
-          <p className="text-muted-foreground mb-2">
+          <p className="text-muted-foreground">
             Não foi localizada nenhuma clínica dentro do raio de 40km.
-          </p>
-          <p className="text-sm text-emerald font-medium">
-            Mas não se preocupe! É possível solicitar um credenciamento à CONNAPA.
           </p>
         </CardContent>
       </Card>
@@ -246,9 +235,6 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
         {topResults.map((result, index) => (
           <ResultItem key={`${result.name}-${index}`} result={result} index={index} />
         ))}
-        <p className="text-xs text-muted-foreground text-center pt-2">
-          Distância estimada por rota de carro. Valores aproximados com margem de erro de até 1km.
-        </p>
       </CardContent>
     </Card>
   );
