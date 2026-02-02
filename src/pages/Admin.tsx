@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { useEmpresa } from '@/hooks/useEmpresa';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Loader2, AlertCircle, CheckCircle2, Settings, Link2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, AlertCircle, CheckCircle2, Settings, Link2, Eye, EyeOff } from 'lucide-react';
 import { isValidGoogleSheetsUrl, fetchGoogleSheetsCsv, validateRequiredColumns } from '@/lib/googleSheets';
 import { parseCSV } from '@/lib/csv';
 
 export default function Admin() {
   const { empresa, isAdminValidated, setAdminValidated, setEmpresa } = useEmpresa();
   const [adminSecret, setAdminSecret] = useState('');
+  const [showAdminSecret, setShowAdminSecret] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   
@@ -218,14 +219,30 @@ export default function Admin() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleValidateAdmin} className="space-y-4">
-              <Input
-                type="password"
-                placeholder="Código administrativo"
-                value={adminSecret}
-                onChange={(e) => setAdminSecret(e.target.value)}
-                disabled={isValidating}
-                autoFocus
-              />
+              <div className="relative">
+                <Input
+                  type={showAdminSecret ? 'text' : 'password'}
+                  placeholder="Código administrativo"
+                  value={adminSecret}
+                  onChange={(e) => setAdminSecret(e.target.value)}
+                  disabled={isValidating}
+                  autoFocus
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAdminSecret(!showAdminSecret)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                  aria-label={showAdminSecret ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showAdminSecret ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
 
               {validationError && (
                 <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-md">
@@ -314,7 +331,7 @@ export default function Admin() {
                 <div
                   className={`flex items-center gap-2 text-sm p-3 rounded-md ${
                     sheetTestResult.success
-                      ? 'text-emerald-700 bg-emerald-50'
+                      ? 'text-emerald bg-emerald/10'
                       : 'text-destructive bg-destructive/10'
                   }`}
                 >
@@ -382,7 +399,7 @@ export default function Admin() {
               </div>
               <div className="flex justify-between py-2">
                 <span className="text-muted-foreground">Status</span>
-                <span className={empresa.is_active ? 'text-emerald-600' : 'text-destructive'}>
+                <span className={empresa.is_active ? 'text-emerald font-medium' : 'text-destructive'}>
                   {empresa.is_active ? 'Ativa' : 'Inativa'}
                 </span>
               </div>
