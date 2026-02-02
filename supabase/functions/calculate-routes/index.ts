@@ -170,20 +170,88 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-interface TableAPIResult {
+interface DistanceMatrixResult {
   distances: (number | null)[];
   durations: (number | null)[];
+  source: "google" | "osrm";
 }
 
 /**
- * Use OSRM Table API to calculate distances from one origin to multiple destinations
- * in a single HTTP call. Much more efficient than individual route calls.
+ * Use Google Distance Matrix API for accurate driving distances and durations.
+ * Requires GOOGLE_GEOCODING_API_KEY secret (also works for Distance Matrix API).
  */
-async function getTableDistances(
+async function getGoogleDistanceMatrix(
   originLat: number,
   originLon: number,
   destinations: { lat: number; lon: number }[]
-): Promise<TableAPIResult | null> {
+): Promise<DistanceMatrixResult | null> {
+  const apiKey = Deno.env.get("GOOGLE_GEOCODING_API_KEY");
+  
+  if (!apiKey) {
+    devLog.error("GOOGLE_GEOCODING_API_KEY not configured");
+    return null;
+  }
+
+  try {
+    // Build destinations string: lat,lon|lat,lon|...
+    const destinationsStr = destinations
+      .map((d) => `${d.lat},${d.lon}`)
+      .join("|");
+
+    const url = new URL("https://maps.googleapis.com/maps/api/distancematrix/json");
+    url.searchParams.set("origins", `${originLat},${originLon}`);
+    url.searchParams.set("destinations", destinationsStr);
+    url.searchParams.set("mode", "driving");
+    url.searchParams.set("language", "pt-BR");
+    url.searchParams.set("key", apiKey);
+
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+      devLog.error(`Google Distance Matrix API error: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (data.status !== "OK") {
+      devLog.error("Google Distance Matrix API returned error:", data.status, data.error_message);
+      return null;
+    }
+
+    // Extract distances and durations from the response
+    const elements = data.rows?.[0]?.elements || [];
+    const distances: (number | null)[] = [];
+    const durations: (number | null)[] = [];
+
+    for (const element of elements) {
+      if (element.status === "OK") {
+        distances.push(element.distance?.value ?? null); // meters
+        durations.push(element.duration?.value ?? null); // seconds
+      } else {
+        distances.push(null);
+        durations.push(null);
+      }
+    }
+
+    devLog.log(`Google Distance Matrix: ${distances.filter(d => d !== null).length}/${destinations.length} routes calculated`);
+
+    return { distances, durations, source: "google" };
+  } catch (error) {
+    devLog.error("Google Distance Matrix API error:", error);
+    return null;
+  }
+}
+
+/**
+ * Use OSRM Table API as fallback for calculating distances.
+ * Free but may have less accurate/updated data.
+ */
+async function getOSRMTableDistances(
+  originLat: number,
+  originLon: number,
+  destinations: { lat: number; lon: number }[]
+): Promise<DistanceMatrixResult | null> {
   try {
     // Build coordinates string: origin first, then all destinations
     // OSRM uses lon,lat order
@@ -217,16 +285,18 @@ async function getTableDistances(
     const distances = data.distances?.[0]?.slice(1) || []; // Remove first element (origin to origin = 0)
     const durations = data.durations?.[0]?.slice(1) || [];
 
-    return { distances, durations };
+    devLog.log(`OSRM Table: ${distances.filter((d: number | null) => d !== null).length}/${destinations.length} routes calculated`);
+
+    return { distances, durations, source: "osrm" };
   } catch (error) {
-    devLog.error("Table API error:", error);
+    devLog.error("OSRM Table API error:", error);
     return null;
   }
 }
 
 /**
- * Process a batch of locations using the Table API
- * Falls back to individual requests if Table API fails
+ * Process a batch of locations using Distance Matrix APIs
+ * Tries Google first, then OSRM Table, then individual OSRM requests
  */
 async function processBatchWithTableAPI(
   batch: Location[],
@@ -238,13 +308,21 @@ async function processBatchWithTableAPI(
     lon: loc.longitude,
   }));
 
-  const tableResult = await getTableDistances(originLat, originLon, destinations);
+  // Try Google Distance Matrix first (more accurate)
+  let matrixResult = await getGoogleDistanceMatrix(originLat, originLon, destinations);
+  
+  // Fallback to OSRM if Google fails
+  if (!matrixResult) {
+    devLog.log("Google Distance Matrix failed, falling back to OSRM");
+    matrixResult = await getOSRMTableDistances(originLat, originLon, destinations);
+  }
 
-  if (tableResult) {
-    // Successfully got results from Table API
+  if (matrixResult) {
+    // Successfully got results from Distance Matrix API
+    devLog.log(`Using ${matrixResult.source} results`);
     return batch.map((location, index) => {
-      const distance = tableResult.distances[index];
-      const duration = tableResult.durations[index];
+      const distance = matrixResult!.distances[index];
+      const duration = matrixResult!.durations[index];
 
       if (distance === null || duration === null) {
         return null;
@@ -263,8 +341,8 @@ async function processBatchWithTableAPI(
     });
   }
 
-  // Fallback: process in parallel with individual route requests
-  devLog.log("Table API failed, falling back to parallel individual requests");
+  // Fallback: process in parallel with individual route requests (OSRM)
+  devLog.log("All matrix APIs failed, falling back to parallel individual OSRM requests");
   
   const promises = batch.map(async (location) => {
     try {
