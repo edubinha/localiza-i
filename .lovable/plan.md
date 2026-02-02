@@ -1,66 +1,59 @@
-# Plano: Migração Completa - Google Maps → OpenStreetMap + OpenRouteService
 
-## ✅ Status: CONCLUÍDO
-
----
+# Plano: Correção do Bug Visual - Linha Acima dos Campos
 
 ## Resumo
 
-Migração completa de todas as APIs do Google Maps para alternativas open-source:
-- **Geocodificação**: Nominatim (OpenStreetMap) - exclusivo
-- **Cálculo de rotas**: OpenRouteService (ORS) - primário, OSRM - fallback
+Corrigir a linha horizontal indesejada que aparece acima de alguns campos do formulário (visível especialmente no campo "Cidade").
 
 ---
 
-## Alterações Realizadas
+## Diagnóstico
 
-### 1. ✅ Segredo da API Adicionado
-- `OPENROUTESERVICE_API_KEY` configurado no backend
-
-### 2. ✅ src/lib/geocoding.ts
-- Removida função `tryGoogleGeocode`
-- Removido import do Supabase client
-- Nominatim como único provedor de geocodificação
-- Estratégias progressivas mantidas:
-  1. Endereço completo (rua + número)
-  2. Endereço sem número
-  3. Busca por bairro
-  4. Cidade + estado
-  5. Busca textual (fallback)
-
-### 3. ✅ supabase/functions/calculate-routes/index.ts
-- Removida função `getGoogleDistanceMatrix`
-- Adicionada função `getOpenRouteServiceMatrix` (primário)
-- OSRM mantido como fallback gratuito
-- Interface `DistanceMatrixResult.source` atualizada: `"ors" | "osrm"`
-
-### 4. ✅ supabase/functions/geocode-address/
-- Edge Function deletada (usava exclusivamente Google)
+A linha horizontal visível acima dos campos é causada por estilos de **autofill do navegador** combinados com o container `relative` do componente `CityAutocomplete`. Quando o navegador aplica estilos de autocomplete/autofill, ele pode adicionar decorações visuais que aparecem como bordas extras.
 
 ---
 
-## Arquitetura Final
+## Solução
 
-```text
-FRONTEND
-  geocoding.ts
-    +-- tryStructuredGeocode (Nominatim)
-    +-- tryFreeTextGeocode (Nominatim)
-    +-- Cache em memória
+Aplicar estilos CSS para neutralizar os efeitos do autofill do navegador e garantir consistência visual.
 
-EDGE FUNCTION (calculate-routes)
-    +-- Pre-filtro Haversine (60km)
-    +-- OpenRouteService Matrix API  ← PRIMÁRIO
-    +-- OSRM Table API               ← FALLBACK 1
-    +-- OSRM Route individual        ← FALLBACK 2
+### Arquivo 1: `src/components/ui/input.tsx`
+
+Adicionar classes para remover decorações de autofill do navegador em todos os inputs:
+
+```tsx
+className={cn(
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+  // Novos estilos para remover decorações de autofill
+  "[&:-webkit-autofill]:bg-background",
+  "[&:-webkit-autofill]:[-webkit-box-shadow:0_0_0_1000px_hsl(var(--background))_inset]",
+  "[&:-webkit-autofill]:[-webkit-text-fill-color:hsl(var(--foreground))]",
+  className,
+)}
+```
+
+### Arquivo 2: `src/components/CityAutocomplete.tsx`
+
+Adicionar `overflow-hidden` ao container e garantir que não há bordas extras:
+
+```tsx
+<div ref={containerRef} className="relative overflow-hidden">
 ```
 
 ---
 
-## Benefícios
+## Arquivos a Modificar
 
-| Aspecto | Antes (Google) | Depois (ORS + Nominatim) |
-|---------|----------------|--------------------------|
-| Custo | $5/1000 elementos | Gratuito (até 2000 req/dia) |
-| Dependência | Proprietário | Open-source |
-| Fallback | OSRM | OSRM (mantido) |
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/ui/input.tsx` | Adicionar estilos anti-autofill |
+| `src/components/CityAutocomplete.tsx` | Adicionar `overflow-hidden` ao container |
+
+---
+
+## Impacto
+
+- **Visual**: Remove a linha indesejada que aparece acima dos campos
+- **Compatibilidade**: Funciona em Chrome, Edge, Safari e Firefox
+- **Sem quebras**: Não afeta a funcionalidade dos campos
+
