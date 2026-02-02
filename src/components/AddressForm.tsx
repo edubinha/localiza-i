@@ -25,6 +25,7 @@ import {
 import { brazilianStates } from '@/lib/states';
 import { geocodeAddress } from '@/lib/geocoding';
 import { calculateRoutes, type RouteResult } from '@/lib/routing';
+import { CityAutocomplete } from '@/components/CityAutocomplete';
 import type { LocationData } from '@/lib/spreadsheet';
 
 interface ViaCepResponse {
@@ -60,6 +61,8 @@ export interface SearchResult {
   neighborhood?: string;
   city?: string;
   state?: string;
+  // Origin address for Google Maps directions
+  originAddress?: string;
 }
 
 interface AddressFormProps {
@@ -108,13 +111,15 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
       // Auto-fill the form fields
       form.setValue('street', data.logradouro || '');
       form.setValue('neighborhood', data.bairro || '');
-      form.setValue('city', data.localidade || '');
       
       // Find the state value that matches the UF
       const stateMatch = brazilianStates.find(s => s.value === data.uf);
       if (stateMatch) {
         form.setValue('state', stateMatch.value);
       }
+      
+      // Set city after state (for autocomplete to work)
+      form.setValue('city', data.localidade || '');
 
       setCepError(null);
     } catch (error) {
@@ -143,6 +148,19 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
       setCepError(null);
     }
   }, [form, fetchAddressByCep]);
+
+  const buildOriginAddress = (data: AddressFormData): string => {
+    const stateName = brazilianStates.find(s => s.value === data.state)?.label || data.state;
+    const parts = [
+      data.street,
+      data.number,
+      data.neighborhood,
+      data.city,
+      stateName,
+      'Brasil'
+    ].filter(Boolean);
+    return parts.join(', ');
+  };
 
   const onSubmit = async (data: AddressFormData) => {
     if (locations.length === 0) {
@@ -177,6 +195,8 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
         locations
       );
 
+      const originAddress = buildOriginAddress(data);
+
       // Map to SearchResult format and filter locations > 40km
       const MAX_DISTANCE_KM = 40;
       const sortedLocations = routeResults
@@ -192,6 +212,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
           neighborhood: route.neighborhood,
           city: route.city,
           state: route.state,
+          originAddress,
         }))
         .filter((location) => location.distance <= MAX_DISTANCE_KM);
 
@@ -206,6 +227,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
   };
 
   const isDisabled = locations.length === 0;
+  const selectedState = form.watch('state');
 
   return (
     <Card>
@@ -328,24 +350,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cidade</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Ex: São Paulo" 
-                        {...field} 
-                        disabled={isDisabled}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
+              {/* State Field - Before City for autocomplete dependency */}
               <FormField
                 control={form.control}
                 name="state"
@@ -353,7 +358,11 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                   <FormItem>
                     <FormLabel>Estado</FormLabel>
                     <Select 
-                      onValueChange={field.onChange} 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Clear city when state changes
+                        form.setValue('city', '');
+                      }} 
                       value={field.value}
                       disabled={isDisabled}
                     >
@@ -374,6 +383,27 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                   </FormItem>
                 )}
               />
+
+              {/* City Field with Autocomplete */}
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cidade</FormLabel>
+                    <FormControl>
+                      <CityAutocomplete
+                        value={field.value}
+                        onChange={field.onChange}
+                        stateCode={selectedState}
+                        disabled={isDisabled}
+                        placeholder="Ex: São Paulo"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <Button 
@@ -389,7 +419,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
               ) : (
                 <>
                   <Search className="h-4 w-4" />
-                  Buscar Prestadores
+                  Buscar Clínicas
                 </>
               )}
             </Button>
