@@ -7,39 +7,37 @@ import { useEmpresa } from '@/hooks/useEmpresa';
 import { supabase } from '@/integrations/supabase/client';
 import { KeyRound, Loader2, AlertCircle } from 'lucide-react';
 import logo from '@/assets/logo.png';
-
 export default function Login() {
   const [accessKey, setAccessKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { setEmpresa } = useEmpresa();
+  const {
+    setEmpresa
+  } = useEmpresa();
   const navigate = useNavigate();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!accessKey.trim()) {
       setError('Por favor, informe a chave de acesso.');
       return;
     }
-
     setIsLoading(true);
     setError(null);
-
     try {
       // Use edge function for secure validation - no direct DB access
-      const { data: responseData, error: fnError } = await supabase.functions.invoke('validate-empresa', {
+      const {
+        data: responseData,
+        error: fnError
+      } = await supabase.functions.invoke('validate-empresa', {
         body: {
           action: 'validate',
-          access_key: accessKey.trim(),
-        },
+          access_key: accessKey.trim()
+        }
       });
-
       if (fnError || !responseData?.success || !responseData?.empresa) {
         setError('Chave de acesso inválida. Verifique e tente novamente.');
         return;
       }
-
       const data = responseData.empresa;
 
       // Store empresa in context (without admin_secret for security)
@@ -48,9 +46,8 @@ export default function Login() {
         nome: data.nome,
         access_key: data.access_key,
         google_sheets_url: data.google_sheets_url,
-        is_active: data.is_active,
+        is_active: data.is_active
       });
-
       navigate('/');
     } catch (err) {
       console.error('Login error:', err);
@@ -59,13 +56,11 @@ export default function Login() {
       setIsLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen bg-secondary/30 flex items-center justify-center p-4">
+  return <div className="min-h-screen bg-secondary/30 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img src={logo} alt="LocalizAI" className="h-10" />
+            <img alt="LocalizAI" className="h-10" src="/lovable-uploads/9fdf197f-bcb3-42c3-a689-f24ea6e60f4f.png" />
           </div>
           <CardTitle className="text-xl">Acesso à Plataforma</CardTitle>
           <CardDescription>
@@ -77,38 +72,23 @@ export default function Login() {
             <div className="space-y-2">
               <div className="relative">
                 <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Digite sua chave de acesso"
-                  value={accessKey}
-                  onChange={(e) => setAccessKey(e.target.value)}
-                  className="pl-10"
-                  disabled={isLoading}
-                  autoFocus
-                />
+                <Input type="text" placeholder="Digite sua chave de acesso" value={accessKey} onChange={e => setAccessKey(e.target.value)} className="pl-10" disabled={isLoading} autoFocus />
               </div>
             </div>
 
-            {error && (
-              <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+            {error && <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 <span>{error}</span>
-              </div>
-            )}
+              </div>}
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
+              {isLoading ? <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Validando...
-                </>
-              ) : (
-                'Entrar'
-              )}
+                </> : 'Entrar'}
             </Button>
           </form>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
