@@ -14,21 +14,18 @@ const devLog = {
   },
 };
 
-// CORS configuration - uses dynamic origin matching for Lovable domains
-// In production, this matches *.lovable.app and *.lovableproject.com domains
-const LOVABLE_DOMAIN_PATTERNS = ['.lovable.app', '.lovableproject.com'];
-const DEV_ORIGINS = ['http://localhost:5173', 'http://localhost:8080'];
+// CORS configuration - explicit allowlist for production domains
+// Only specific approved origins are allowed
+const ALLOWED_ORIGINS = [
+  'https://localiza-i.lovable.app',
+  'https://id-preview--dd0f1f18-b3a6-40c0-a96b-4abaaca86b05.lovable.app',
+  'http://localhost:5173',
+  'http://localhost:8080',
+];
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
-  
-  // Check development origins
-  if (DEV_ORIGINS.includes(origin)) {
-    return true;
-  }
-  
-  // Check Lovable production domains
-  return LOVABLE_DOMAIN_PATTERNS.some(pattern => origin.endsWith(pattern));
+  return ALLOWED_ORIGINS.includes(origin);
 }
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
