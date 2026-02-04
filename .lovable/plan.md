@@ -1,43 +1,34 @@
 
-# Plano: Correção do Bug Visual - Linha Acima dos Campos
+# Plano: Correção da Exibição do Estado (UF) nos Resultados
 
 ## Resumo
 
-Corrigir a linha horizontal indesejada que aparece acima de alguns campos do formulário (visível especialmente no campo "Cidade").
+Corrigir a identificação da coluna "Estado (UF)" da planilha do Google Sheets para que o estado seja exibido corretamente nos resultados da busca.
 
 ---
 
 ## Diagnóstico
 
-A linha horizontal visível acima dos campos é causada por estilos de **autofill do navegador** combinados com o container `relative` do componente `CityAutocomplete`. Quando o navegador aplica estilos de autocomplete/autofill, ele pode adicionar decorações visuais que aparecem como bordas extras.
+O código está correto nas funções de formatação (`formatLocation` e `formatFullAddress`), mas a coluna **"Estado (UF)"** não está sendo reconhecida no parser da planilha.
+
+**Causa raiz**: A função `findColumn` busca por variações como `'uf'`, `'estado'` e `'state'`, mas o nome da coluna na planilha é **"Estado (UF)"** que, quando normalizado, fica `"estado (uf)"` — não correspondendo exatamente a nenhuma dessas opções.
 
 ---
 
 ## Solução
 
-Aplicar estilos CSS para neutralizar os efeitos do autofill do navegador e garantir consistência visual.
+Adicionar a variação `"estado (uf)"` à lista de nomes possíveis para a coluna de estado no parser de planilha.
 
-### Arquivo 1: `src/components/ui/input.tsx`
+### Arquivo: `src/lib/spreadsheet.ts`
 
-Adicionar classes para remover decorações de autofill do navegador em todos os inputs:
-
-```tsx
-className={cn(
-  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-  // Novos estilos para remover decorações de autofill
-  "[&:-webkit-autofill]:bg-background",
-  "[&:-webkit-autofill]:[-webkit-box-shadow:0_0_0_1000px_hsl(var(--background))_inset]",
-  "[&:-webkit-autofill]:[-webkit-text-fill-color:hsl(var(--foreground))]",
-  className,
-)}
+**Linha 75 - Alterar de:**
+```typescript
+const stateColIndex = findColumn(headers, ['uf', 'estado', 'state']);
 ```
 
-### Arquivo 2: `src/components/CityAutocomplete.tsx`
-
-Adicionar `overflow-hidden` ao container e garantir que não há bordas extras:
-
-```tsx
-<div ref={containerRef} className="relative overflow-hidden">
+**Para:**
+```typescript
+const stateColIndex = findColumn(headers, ['uf', 'estado', 'state', 'estado (uf)']);
 ```
 
 ---
@@ -46,14 +37,14 @@ Adicionar `overflow-hidden` ao container e garantir que não há bordas extras:
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/ui/input.tsx` | Adicionar estilos anti-autofill |
-| `src/components/CityAutocomplete.tsx` | Adicionar `overflow-hidden` ao container |
+| `src/lib/spreadsheet.ts` | Adicionar `'estado (uf)'` à lista de nomes de coluna para estado |
 
 ---
 
 ## Impacto
 
-- **Visual**: Remove a linha indesejada que aparece acima dos campos
-- **Compatibilidade**: Funciona em Chrome, Edge, Safari e Firefox
-- **Sem quebras**: Não afeta a funcionalidade dos campos
-
+- **Funcionalidade**: O estado passará a ser reconhecido e exibido corretamente em:
+  - Linha de localização abaixo do nome (ex: "Bela Vista, São Paulo - SP")
+  - Endereço completo (ex: "Avenida Paulista, 1000 - Bela Vista, São Paulo - SP")
+- **Compatibilidade**: Mantém compatibilidade com planilhas que usam apenas "UF", "Estado" ou "State"
+- **Sem quebras**: Alteração mínima e segura
