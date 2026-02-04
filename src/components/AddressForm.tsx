@@ -399,7 +399,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
           size="sm"
           onClick={handleUseMyLocation}
           disabled={isDisabled || isSearching || isGettingLocation}
-          className="w-full"
+          className="self-start"
         >
           {isGettingLocation ? (
             <>
