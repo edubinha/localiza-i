@@ -12,6 +12,7 @@ export interface LocationData {
   neighborhood?: string;
   city?: string;
   state?: string;
+  services?: string;
 }
 
 export interface ParseResult {
@@ -73,6 +74,7 @@ function parseRows(jsonData: unknown[][]): ParseResult {
   const cityColIndex = findColumn(headers, ['cidade', 'city']);
   const stateColIndex = findColumn(headers, ['uf', 'estado', 'state']);
   const statusColIndex = findColumn(headers, ['situação', 'situacao', 'status']);
+  const servicesColIndex = findColumn(headers, ['serviços', 'servicos', 'services']);
 
   if (nameColIndex === -1 || latColIndex === -1 || lonColIndex === -1) {
     return {
@@ -131,6 +133,7 @@ function parseRows(jsonData: unknown[][]): ParseResult {
     const neighborhood = neighborhoodColIndex !== -1 ? String(row[neighborhoodColIndex] || '').trim() : undefined;
     const city = cityColIndex !== -1 ? String(row[cityColIndex] || '').trim() : undefined;
     const state = stateColIndex !== -1 ? String(row[stateColIndex] || '').trim() : undefined;
+    const services = servicesColIndex !== -1 ? String(row[servicesColIndex] || '').trim() : undefined;
 
     locations.push({
       name,
@@ -142,6 +145,7 @@ function parseRows(jsonData: unknown[][]): ParseResult {
       neighborhood: neighborhood || undefined,
       city: city || undefined,
       state: state || undefined,
+      services: services || undefined,
     });
   }
 

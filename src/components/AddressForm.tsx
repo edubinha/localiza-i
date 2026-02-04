@@ -61,6 +61,7 @@ export interface SearchResult {
   neighborhood?: string;
   city?: string;
   state?: string;
+  services?: string;
   // Origin address for Google Maps directions
   originAddress?: string;
 }
@@ -212,6 +213,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
           neighborhood: route.neighborhood,
           city: route.city,
           state: route.state,
+          services: route.services,
           originAddress,
         }))
         .filter((location) => location.distance <= MAX_DISTANCE_KM);

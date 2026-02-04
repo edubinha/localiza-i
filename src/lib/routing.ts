@@ -17,6 +17,7 @@ export interface RouteResult {
   neighborhood?: string;
   city?: string;
   state?: string;
+  services?: string;
 }
 
 export async function calculateRoutes(
@@ -76,6 +77,7 @@ export async function calculateRoutes(
       neighborhood?: string;
       city?: string;
       state?: string;
+      services?: string;
     }) => ({
       ...route,
       formattedDistance: formatDistance(route.distanceKm),

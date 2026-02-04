@@ -58,6 +58,7 @@ interface Location {
   neighborhood?: string;
   city?: string;
   state?: string;
+  services?: string;
 }
 
 interface RouteRequest {
@@ -75,6 +76,7 @@ interface RouteResult {
   neighborhood?: string;
   city?: string;
   state?: string;
+  services?: string;
 }
 
 // Validation helper functions
@@ -115,7 +117,7 @@ function isValidLocation(loc: unknown): loc is Location {
   }
   
   // Validate optional string fields length
-  const optionalStrings = ['address', 'number', 'neighborhood', 'city', 'state'];
+  const optionalStrings = ['address', 'number', 'neighborhood', 'city', 'state', 'services'];
   for (const field of optionalStrings) {
     if (location[field] !== undefined && location[field] !== null) {
       if (typeof location[field] !== 'string' || (location[field] as string).length > MAX_STRING_LENGTH) {
@@ -368,6 +370,7 @@ async function processBatchWithTableAPI(
         neighborhood: location.neighborhood,
         city: location.city,
         state: location.state,
+        services: location.services,
       };
     });
   }
@@ -398,6 +401,7 @@ async function processBatchWithTableAPI(
         neighborhood: location.neighborhood,
         city: location.city,
         state: location.state,
+        services: location.services,
       };
     } catch {
       return null;
