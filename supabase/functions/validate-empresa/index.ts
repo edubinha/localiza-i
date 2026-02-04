@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,35 @@ interface ValidateRequest {
   empresa_id?: string;
   admin_secret?: string;
   google_sheets_url?: string;
+}
+
+/**
+ * Securely verify admin secret against stored bcrypt hash.
+ * Uses bcrypt.compare which is timing-safe.
+ */
+async function verifyAdminSecret(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  empresaId: string,
+  adminSecret: string
+): Promise<boolean> {
+  // Fetch the stored hash
+  const { data, error } = await supabase
+    .from('empresas')
+    .select('admin_secret_hash')
+    .eq('id', empresaId)
+    .single();
+
+  if (error || !data?.admin_secret_hash) {
+    return false;
+  }
+
+  // Use bcrypt to compare - this is timing-safe
+  try {
+    return await bcrypt.compare(adminSecret, data.admin_secret_hash as string);
+  } catch {
+    return false;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -77,7 +107,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Action: Validate admin_secret using secure hash comparison
+    // Action: Validate admin_secret using secure bcrypt comparison
     if (action === 'admin-validate') {
       const { empresa_id, admin_secret } = body;
       
@@ -88,15 +118,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Verify admin_secret against hash using PostgreSQL's crypt function
-      // This prevents timing attacks and doesn't expose the secret
-      const { data, error } = await supabase
-        .rpc('verify_admin_secret', {
-          p_empresa_id: empresa_id,
-          p_admin_secret: admin_secret
-        });
+      // Verify admin_secret against bcrypt hash
+      const isValid = await verifyAdminSecret(supabase, empresa_id, admin_secret);
 
-      if (error || !data) {
+      if (!isValid) {
         return new Response(
           JSON.stringify({ error: 'Invalid admin secret' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -120,14 +145,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Verify admin_secret against hash using PostgreSQL's crypt function
-      const { data: authData, error: authError } = await supabase
-        .rpc('verify_admin_secret', {
-          p_empresa_id: empresa_id,
-          p_admin_secret: admin_secret
-        });
+      // Verify admin_secret against bcrypt hash
+      const isAuthorized = await verifyAdminSecret(supabase, empresa_id, admin_secret);
 
-      if (authError || !authData) {
+      if (!isAuthorized) {
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
