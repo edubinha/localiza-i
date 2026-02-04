@@ -108,7 +108,7 @@ export function CityAutocomplete({
   const showSuggestions = isOpen && suggestions.length > 0;
 
   return (
-    <div ref={containerRef} className="relative overflow-hidden">
+    <div ref={containerRef} className="relative">
       <Input
         ref={inputRef}
         value={value}
