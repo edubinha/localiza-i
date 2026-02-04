@@ -36,9 +36,9 @@ async function verifyAdminSecret(
     return false;
   }
 
-  // Use bcrypt to compare - this is timing-safe
+  // Use bcrypt to compare - synchronous version for edge functions compatibility
   try {
-    return await bcrypt.compare(adminSecret, data.admin_secret_hash as string);
+    return bcrypt.compareSync(adminSecret, data.admin_secret_hash as string);
   } catch {
     return false;
   }
