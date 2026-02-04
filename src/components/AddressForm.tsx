@@ -165,7 +165,13 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
 
   const onSubmit = async (data: AddressFormData) => {
     if (locations.length === 0) {
-      onError('Por favor, importe uma planilha com os locais antes de buscar.');
+      onError('Por favor, aguarde o carregamento dos prestadores.');
+      return;
+    }
+
+    // Validate that at least city is filled (minimum required)
+    if (!data.city?.trim() || !data.state?.trim()) {
+      onError('Preencha pelo menos a cidade e o estado para realizar a busca.');
       return;
     }
 
@@ -176,15 +182,15 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
       const stateName = brazilianStates.find(s => s.value === data.state)?.label || data.state;
       
       const coords = await geocodeAddress(
-        data.street,
-        data.number,
-        data.neighborhood,
+        data.street || '',
+        data.number || '',
+        data.neighborhood || '',
         data.city,
         stateName
       );
 
       if (!coords) {
-        onError('Não foi possível encontrar as coordenadas do endereço informado. Por favor, verifique os dados e tente novamente.');
+        onError('Endereço não localizado. Tente informar mais detalhes como bairro ou CEP.');
         setIsSearching(false);
         return;
       }
@@ -221,7 +227,16 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
       onResults(sortedLocations);
     } catch (error) {
       devLog.error('Search error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro ao buscar os locais. Por favor, tente novamente.';
+      let errorMessage = 'Ocorreu um erro ao buscar os locais. Por favor, tente novamente.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       onError(errorMessage);
     } finally {
       setIsSearching(false);

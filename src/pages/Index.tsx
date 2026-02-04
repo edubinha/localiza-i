@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Header } from '@/components/Header';
 import { AddressForm, type SearchResult } from '@/components/AddressForm';
 import { ResultsList } from '@/components/ResultsList';
@@ -16,6 +16,7 @@ const Index = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const resultsRef = useRef<HTMLDivElement>(null);
   
   // Sheet loading state
   const [isLoadingSheet, setIsLoadingSheet] = useState(false);
@@ -87,6 +88,11 @@ const Index = () => {
     setIsSearching(false);
     setSearchError(null);
     setHasSearched(true);
+    
+    // Scroll to results after a brief delay to allow render
+    setTimeout(() => {
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const handleError = (error: string) => {
@@ -175,6 +181,7 @@ const Index = () => {
                 Resultados
               </h3>
               <ResultsList 
+                ref={resultsRef}
                 results={results} 
                 isLoading={isSearching} 
                 error={searchError}
