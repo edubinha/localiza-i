@@ -60,7 +60,7 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img alt="LocalizAI" className="h-10" src="/lovable-uploads/1656487f-9eb9-41c2-b885-32aeb4e002ef.png" />
+            <img alt="LocalizAI" className="h-10" src="/lovable-uploads/6cf1aa4f-e020-4f7d-8342-296d80b25f83.png" />
           </div>
           <CardTitle className="text-xl">Acesso à Plataforma</CardTitle>
           <CardDescription>
@@ -72,16 +72,7 @@ export default function Login() {
             <div className="space-y-2">
               <div className="relative overflow-hidden">
                 <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  type="text" 
-                  placeholder="Digite sua chave de acesso" 
-                  value={accessKey} 
-                  onChange={e => setAccessKey(e.target.value)} 
-                  className="pl-10" 
-                  disabled={isLoading} 
-                  autoFocus 
-                  autoComplete="off"
-                />
+                <Input type="text" placeholder="Digite sua chave de acesso" value={accessKey} onChange={e => setAccessKey(e.target.value)} className="pl-10" disabled={isLoading} autoFocus autoComplete="off" />
               </div>
             </div>
 
