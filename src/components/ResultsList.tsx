@@ -61,17 +61,17 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
 
   return (
     <div
-      className="flex flex-col gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+      className="flex flex-col gap-2 p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
     >
       <div className="flex items-start gap-3 sm:gap-4">
-        <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-navy/10 flex items-center justify-center">
-          <span className="font-bold text-navy text-sm sm:text-base">{index + 1}</span>
+        <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-primary/10 flex items-center justify-center">
+          <span className="font-bold text-primary text-sm sm:text-base">{index + 1}</span>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2">
             <h3 className="font-medium text-foreground text-sm sm:text-base leading-tight">{result.name}</h3>
             {isOnlyExams && (
-              <FlaskConical className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+              <FlaskConical className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
             )}
           </div>
           {locationSummary && (
@@ -79,8 +79,8 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
           )}
           <div className="flex items-center justify-between mt-1.5 sm:mt-1">
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4 text-emerald" />
-              <span className="font-medium text-emerald">{result.formattedDistance}</span>
+              <MapPin className="h-4 w-4 text-accent" />
+              <span className="font-medium text-accent">{result.formattedDistance}</span>
             </div>
             {/* Mobile: button inline with distance, Desktop: button on the right */}
             {hasAddressDetails && (
@@ -158,7 +158,7 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center py-8">
-            <div className="h-12 w-12 rounded-full border-4 border-muted border-t-navy animate-spin mb-4" />
+            <div className="h-12 w-12 rounded-full border-4 border-muted border-t-primary animate-spin mb-4" />
             <p className="text-muted-foreground">Calculando rotas...</p>
           </div>
         </CardContent>
@@ -212,21 +212,21 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
     <Card ref={ref}>
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
-          <Navigation className="h-5 w-5 text-emerald" />
+          <Navigation className="h-5 w-5 text-accent" />
           Clínicas mais próximas
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {searchInfo && (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-muted border border-border text-muted-foreground text-sm">
             <Info className="h-4 w-4 flex-shrink-0" />
-            <span>Busca realizada utilizando: <strong>{searchInfo}</strong></span>
+            <span>Busca realizada utilizando: <strong className="text-foreground">{searchInfo}</strong></span>
           </div>
         )}
         {hasOnlyExams && (
-          <Alert className="bg-blue-50 border-blue-200">
-            <FlaskConical className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800 text-sm">
+          <Alert className="bg-accent/10 border-accent/30">
+            <FlaskConical className="h-4 w-4 text-accent" />
+            <AlertDescription className="text-accent-foreground text-sm">
               Este local realiza apenas exames laboratoriais e/ou de imagem.
             </AlertDescription>
           </Alert>

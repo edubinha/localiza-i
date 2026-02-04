@@ -139,7 +139,7 @@ const Index = () => {
               ) : (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <FileSpreadsheet className="h-5 w-5 text-emerald" />
+                    <FileSpreadsheet className="h-5 w-5 text-accent" />
                     <div>
                       <p className="font-medium">
                         {sheetName || 'Planilha de Prestadores'}
@@ -160,10 +160,10 @@ const Index = () => {
           {/* Address Form - Only show when sheet is loaded */}
           {!isLoadingSheet && !sheetError && locations.length > 0 && (
             <section>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-                <span className="h-6 w-6 rounded-full bg-navy text-primary-foreground flex items-center justify-center text-xs font-bold">1</span>
-                Informe o endereço
-              </h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+              <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">1</span>
+              Informe o endereço
+            </h3>
               <AddressForm
                 locations={locations}
                 onResults={handleResults}
@@ -176,10 +176,10 @@ const Index = () => {
           {/* Results */}
           {(hasSearched || isSearching || searchError) && (
             <section>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-                <span className="h-6 w-6 rounded-full bg-emerald text-primary-foreground flex items-center justify-center text-xs font-bold">2</span>
-                Resultados
-              </h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+              <span className="h-6 w-6 rounded-full bg-accent text-accent-foreground flex items-center justify-center text-xs font-bold">2</span>
+              Resultados
+            </h3>
               <ResultsList 
                 ref={resultsRef}
                 results={results} 
