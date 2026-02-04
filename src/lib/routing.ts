@@ -23,8 +23,14 @@ export interface RouteResult {
 export async function calculateRoutes(
   originLat: number,
   originLon: number,
-  locations: LocationData[]
+  locations: LocationData[],
+  empresaId: string
 ): Promise<RouteResult[]> {
+  // Validate empresaId is provided
+  if (!empresaId || empresaId.trim().length === 0) {
+    throw new Error("Identificação da empresa é obrigatória para calcular rotas.");
+  }
+
   // Pre-filter locations using Haversine distance to reduce payload
   // Also sort by distance to prioritize closest locations
   const nearbyLocations = locations
@@ -53,6 +59,7 @@ export async function calculateRoutes(
   try {
     const { data, error } = await supabase.functions.invoke("calculate-routes", {
       body: {
+        empresaId,
         originLat,
         originLon,
         locations: nearbyLocations,
