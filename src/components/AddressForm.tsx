@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useEmpresa } from '@/hooks/useEmpresa';
 import { devLog } from '@/lib/logger';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -74,6 +75,7 @@ interface AddressFormProps {
 }
 
 export function AddressForm({ locations, onResults, onError, onSearchStart }: AddressFormProps) {
+  const { empresa } = useEmpresa();
   const [isSearching, setIsSearching] = useState(false);
   const [isFetchingCep, setIsFetchingCep] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
@@ -196,10 +198,17 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
       }
 
       // Calculate real route distances using OSRM
+      if (!empresa?.id) {
+        onError('Sessão da empresa não encontrada. Por favor, faça login novamente.');
+        setIsSearching(false);
+        return;
+      }
+
       const routeResults = await calculateRoutes(
         coords.lat,
         coords.lon,
-        locations
+        locations,
+        empresa.id
       );
 
       const originAddress = buildOriginAddress(data);

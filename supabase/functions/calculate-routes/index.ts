@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Environment check - suppress verbose logs in production
 const isDev = Deno.env.get("DENO_ENV") === "development" || Deno.env.get("FUNCTIONS_ENV") === "development";
@@ -62,6 +63,7 @@ interface Location {
 }
 
 interface RouteRequest {
+  empresaId: string;
   originLat: number;
   originLon: number;
   locations: Location[];
@@ -135,7 +137,18 @@ function validateRequest(body: unknown): { valid: true; data: RouteRequest } | {
   }
 
   const request = body as Record<string, unknown>;
-  const { originLat, originLon, locations } = request;
+  const { empresaId, originLat, originLon, locations } = request;
+
+  // Validate empresaId (required for authentication)
+  if (typeof empresaId !== "string" || empresaId.trim().length === 0) {
+    return { valid: false, error: "empresaId é obrigatório" };
+  }
+
+  // Basic UUID format validation
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(empresaId)) {
+    return { valid: false, error: "empresaId inválido" };
+  }
 
   // Validate origin coordinates
   if (typeof originLat !== "number" || typeof originLon !== "number") {
@@ -169,6 +182,7 @@ function validateRequest(body: unknown): { valid: true; data: RouteRequest } | {
   return {
     valid: true,
     data: {
+      empresaId: empresaId.trim(),
       originLat: originLat as number,
       originLon: originLon as number,
       locations: locations as Location[],
@@ -452,6 +466,41 @@ serve(async (req) => {
         JSON.stringify({ error: validation.error }),
         {
           status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Validate empresa exists and is active
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      devLog.error("Missing Supabase configuration");
+      return new Response(
+        JSON.stringify({ error: "Erro de configuração do servidor" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    const { data: empresa, error: empresaError } = await supabase
+      .from('empresas')
+      .select('id, is_active')
+      .eq('id', validation.data.empresaId)
+      .eq('is_active', true)
+      .single();
+
+    if (empresaError || !empresa) {
+      devLog.log(`Invalid empresa_id attempt: ${validation.data.empresaId}`);
+      return new Response(
+        JSON.stringify({ error: "Empresa não autorizada" }),
+        {
+          status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
