@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Return empresa data without admin_secret
+      // Return empresa data without admin_secret or hash
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Action: Validate admin_secret
+    // Action: Validate admin_secret using secure hash comparison
     if (action === 'admin-validate') {
       const { empresa_id, admin_secret } = body;
       
@@ -88,12 +88,13 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Verify admin_secret against hash using PostgreSQL's crypt function
+      // This prevents timing attacks and doesn't expose the secret
       const { data, error } = await supabase
-        .from('empresas')
-        .select('id')
-        .eq('id', empresa_id)
-        .eq('admin_secret', admin_secret)
-        .single();
+        .rpc('verify_admin_secret', {
+          p_empresa_id: empresa_id,
+          p_admin_secret: admin_secret
+        });
 
       if (error || !data) {
         return new Response(
@@ -119,13 +120,12 @@ Deno.serve(async (req) => {
         );
       }
 
-      // First validate admin_secret
+      // Verify admin_secret against hash using PostgreSQL's crypt function
       const { data: authData, error: authError } = await supabase
-        .from('empresas')
-        .select('id')
-        .eq('id', empresa_id)
-        .eq('admin_secret', admin_secret)
-        .single();
+        .rpc('verify_admin_secret', {
+          p_empresa_id: empresa_id,
+          p_admin_secret: admin_secret
+        });
 
       if (authError || !authData) {
         return new Response(
