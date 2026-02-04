@@ -4,7 +4,7 @@ import { devLog } from '@/lib/logger';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Search, Loader2, Eraser, MapPin } from 'lucide-react';
+import { Search, Loader2, Eraser } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,7 +79,6 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
   const [isSearching, setIsSearching] = useState(false);
   const [isFetchingCep, setIsFetchingCep] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   const form = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
@@ -249,169 +248,37 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
       
       onError(errorMessage);
     } finally {
-    setIsSearching(false);
+      setIsSearching(false);
     }
   };
-
-  const reverseGeocode = useCallback(async (lat: number, lon: number) => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`,
-        {
-          headers: {
-            'User-Agent': 'LocalizAI/1.0'
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error('Erro ao buscar endereço');
-      }
-      
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      devLog.error('Reverse geocoding error:', error);
-      throw error;
-    }
-  }, []);
-
-  const handleUseMyLocation = useCallback(async () => {
-    if (!navigator.geolocation) {
-      onError('Seu navegador não suporta geolocalização.');
-      return;
-    }
-
-    if (locations.length === 0) {
-      onError('Por favor, aguarde o carregamento dos prestadores.');
-      return;
-    }
-
-    setIsGettingLocation(true);
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          
-          // Reverse geocode to get address
-          const geoData = await reverseGeocode(latitude, longitude);
-          
-          if (!geoData || !geoData.address) {
-            onError('Não foi possível identificar seu endereço. Preencha manualmente.');
-            setIsGettingLocation(false);
-            return;
-          }
-
-          const address = geoData.address;
-          
-          // Map state abbreviation from Nominatim
-          const stateCode = address['ISO3166-2-lvl4']?.replace('BR-', '') || '';
-          const stateMatch = brazilianStates.find(s => s.value === stateCode);
-          
-          // Fill form fields
-          if (stateMatch) {
-            form.setValue('state', stateMatch.value);
-          }
-          
-          form.setValue('city', address.city || address.town || address.municipality || address.village || '');
-          form.setValue('neighborhood', address.suburb || address.neighbourhood || address.quarter || '');
-          form.setValue('street', address.road || '');
-          form.setValue('number', address.house_number || '');
-          
-          // Try to get CEP from postcode
-          if (address.postcode) {
-            const cleanCep = address.postcode.replace(/\D/g, '');
-            if (cleanCep.length === 8) {
-              const formattedCep = `${cleanCep.slice(0, 5)}-${cleanCep.slice(5, 8)}`;
-              form.setValue('cep', formattedCep);
-            }
-          }
-
-          setIsGettingLocation(false);
-          
-          // Automatically trigger search
-          form.handleSubmit(onSubmit)();
-          
-        } catch (error) {
-          devLog.error('Location error:', error);
-          onError('Erro ao obter seu endereço. Tente novamente ou preencha manualmente.');
-          setIsGettingLocation(false);
-        }
-      },
-      (error) => {
-        setIsGettingLocation(false);
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            onError('Permissão de localização negada. Habilite nas configurações do navegador.');
-            break;
-          case error.POSITION_UNAVAILABLE:
-            onError('Localização indisponível. Tente novamente.');
-            break;
-          case error.TIMEOUT:
-            onError('Tempo esgotado ao obter localização. Tente novamente.');
-            break;
-          default:
-            onError('Erro ao obter localização. Tente novamente.');
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
-    );
-  }, [form, locations.length, onError, onSubmit, reverseGeocode]);
 
   const isDisabled = locations.length === 0;
   const selectedState = form.watch('state');
 
   return (
     <Card>
-      <CardHeader className="flex flex-col space-y-3 pb-4">
-        <div className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg">Preencha o endereço</CardTitle>
-          <Button 
-            type="button" 
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              form.reset({
-                cep: '',
-                street: '',
-                number: '',
-                neighborhood: '',
-                city: '',
-                state: '',
-              });
-              setCepError(null);
-            }}
-            disabled={isDisabled || isSearching || isGettingLocation}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Eraser className="h-4 w-4 mr-1" />
-            Limpar
-          </Button>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardTitle className="text-lg">Preencha o endereço</CardTitle>
+        <Button 
+          type="button" 
+          variant="ghost"
           size="sm"
-          onClick={handleUseMyLocation}
-          disabled={isDisabled || isSearching || isGettingLocation}
-          className="w-full"
+          onClick={() => {
+            form.reset({
+              cep: '',
+              street: '',
+              number: '',
+              neighborhood: '',
+              city: '',
+              state: '',
+            });
+            setCepError(null);
+          }}
+          disabled={isDisabled || isSearching}
+          className="text-muted-foreground hover:text-foreground"
         >
-          {isGettingLocation ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Obtendo localização...
-            </>
-          ) : (
-            <>
-              <MapPin className="h-4 w-4" />
-              Usar minha localização
-            </>
-          )}
+          <Eraser className="h-4 w-4 mr-1" />
+          Limpar
         </Button>
       </CardHeader>
       <CardContent>
