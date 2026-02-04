@@ -3,10 +3,11 @@ import { devLog } from '@/lib/logger';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Search, Loader2, Eraser } from 'lucide-react';
+import { Search, Loader2, Eraser, MapPinned } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 import {
   Form,
   FormControl,
@@ -74,6 +75,7 @@ interface AddressFormProps {
 
 export function AddressForm({ locations, onResults, onError, onSearchStart }: AddressFormProps) {
   const [isSearching, setIsSearching] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
   const [isFetchingCep, setIsFetchingCep] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
 
@@ -226,6 +228,80 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
     }
   };
 
+  const handleNearMe = async () => {
+    if (locations.length === 0) {
+      onError('Por favor, importe uma planilha com os locais antes de buscar.');
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      onError('Seu navegador não suporta geolocalização.');
+      return;
+    }
+
+    setIsLocating(true);
+    onSearchStart();
+
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+
+      // Calculate real route distances using OSRM
+      const routeResults = await calculateRoutes(latitude, longitude, locations);
+
+      // Map to SearchResult format and filter locations > 40km
+      const MAX_DISTANCE_KM = 40;
+      const sortedLocations = routeResults
+        .map((route: RouteResult) => ({
+          name: route.name,
+          distance: route.distanceKm,
+          formattedDistance: route.formattedDistance,
+          durationMinutes: route.durationMinutes,
+          formattedDuration: route.formattedDuration,
+          searchInfo: 'localização atual',
+          address: route.address,
+          number: route.number,
+          neighborhood: route.neighborhood,
+          city: route.city,
+          state: route.state,
+          originAddress: `${latitude},${longitude}`,
+        }))
+        .filter((location) => location.distance <= MAX_DISTANCE_KM);
+
+      onResults(sortedLocations);
+    } catch (error) {
+      devLog.error('Geolocation error:', error);
+      
+      if (error instanceof GeolocationPositionError) {
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            onError('Permissão de localização negada. Por favor, permita o acesso à sua localização nas configurações do navegador.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            onError('Não foi possível obter sua localização. Tente novamente ou informe o endereço manualmente.');
+            break;
+          case error.TIMEOUT:
+            onError('Tempo esgotado ao buscar localização. Tente novamente.');
+            break;
+          default:
+            onError('Erro ao obter localização. Tente novamente ou informe o endereço manualmente.');
+        }
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Erro ao buscar localização.';
+        onError(errorMessage);
+      }
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
   const isDisabled = locations.length === 0;
   const selectedState = form.watch('state');
 
@@ -256,6 +332,35 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
         </Button>
       </CardHeader>
       <CardContent>
+        {/* Near Me Button */}
+        <div className="mb-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleNearMe}
+            disabled={isDisabled || isSearching || isLocating}
+          >
+            {isLocating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Localizando...
+              </>
+            ) : (
+              <>
+                <MapPinned className="h-4 w-4" />
+                Perto de mim
+              </>
+            )}
+          </Button>
+        </div>
+
+        <div className="relative flex items-center justify-center my-4">
+          <Separator className="flex-1" />
+          <span className="px-3 text-xs text-muted-foreground bg-card">ou informe o endereço</span>
+          <Separator className="flex-1" />
+        </div>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -409,7 +514,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
             <Button 
               type="submit" 
               className="w-full bg-navy hover:bg-navy/90" 
-              disabled={isDisabled || isSearching}
+              disabled={isDisabled || isSearching || isLocating}
             >
               {isSearching ? (
                 <>
