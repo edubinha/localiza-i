@@ -208,10 +208,10 @@ export async function geocodeAddress(
 
     if (fullAddressResult) {
       result = fullAddressResult;
-      searchUsed = 'Nominatim: endereço completo';
+      searchUsed = 'endereço completo';
     } else if (streetOnlyResult) {
       result = streetOnlyResult;
-      searchUsed = 'Nominatim: endereço sem número';
+      searchUsed = 'endereço sem número';
     }
   } else if (street) {
     result = await tryStructuredGeocode({
@@ -221,7 +221,7 @@ export async function geocodeAddress(
       country: 'Brasil',
     });
     if (result) {
-      searchUsed = 'Nominatim: endereço sem número';
+      searchUsed = 'endereço sem número';
     }
   }
 
@@ -230,7 +230,7 @@ export async function geocodeAddress(
     const neighborhoodQuery = `${neighborhood}, ${city}, ${state}, Brasil`;
     result = await tryFreeTextGeocode(neighborhoodQuery, city, state);
     if (result) {
-      searchUsed = 'Nominatim: bairro';
+      searchUsed = 'bairro';
     }
   }
 
@@ -242,7 +242,7 @@ export async function geocodeAddress(
       country: 'Brasil',
     });
     if (result) {
-      searchUsed = 'Nominatim: cidade e estado';
+      searchUsed = 'cidade e estado';
     }
   }
 
@@ -251,7 +251,7 @@ export async function geocodeAddress(
     const freeTextQuery = `${neighborhood}, ${city}, ${state}, Brasil`;
     result = await tryFreeTextGeocode(freeTextQuery, city, state);
     if (result) {
-      searchUsed = 'Nominatim: busca textual (fallback)';
+      searchUsed = 'busca textual (fallback)';
     }
   }
 
