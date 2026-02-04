@@ -72,7 +72,7 @@ function parseRows(jsonData: unknown[][]): ParseResult {
   const numberColIndex = findColumn(headers, ['número', 'numero', 'number', 'num']);
   const neighborhoodColIndex = findColumn(headers, ['bairro', 'neighborhood']);
   const cityColIndex = findColumn(headers, ['cidade', 'city']);
-  const stateColIndex = findColumn(headers, ['uf', 'estado', 'state']);
+  const stateColIndex = findColumn(headers, ['uf', 'estado', 'state', 'estado (uf)']);
   const statusColIndex = findColumn(headers, ['situação', 'situacao', 'status']);
   const servicesColIndex = findColumn(headers, ['serviços', 'servicos', 'services']);
 
