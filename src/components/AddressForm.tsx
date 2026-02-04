@@ -438,7 +438,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full bg-navy hover:bg-navy/90" 
               disabled={isDisabled || isSearching}
             >
               {isSearching ? (

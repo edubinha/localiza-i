@@ -332,7 +332,7 @@ export default function Admin() {
                 <div
                   className={`flex items-center gap-2 text-sm p-3 rounded-md ${
                     sheetTestResult.success
-                      ? 'text-accent bg-accent/10'
+                      ? 'text-emerald bg-emerald/10'
                       : 'text-destructive bg-destructive/10'
                   }`}
                 >
@@ -400,7 +400,7 @@ export default function Admin() {
               </div>
               <div className="flex justify-between py-2">
                 <span className="text-muted-foreground">Status</span>
-                <span className={empresa.is_active ? 'text-accent font-medium' : 'text-destructive'}>
+                <span className={empresa.is_active ? 'text-emerald font-medium' : 'text-destructive'}>
                   {empresa.is_active ? 'Ativa' : 'Inativa'}
                 </span>
               </div>
