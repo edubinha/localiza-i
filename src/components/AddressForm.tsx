@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Search, Loader2, Eraser, MapPin } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -292,7 +293,17 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
-          const { latitude, longitude } = position.coords;
+          const { latitude, longitude, accuracy } = position.coords;
+          
+          // Check accuracy and warn user if low (> 500 meters)
+          const isLowAccuracy = accuracy > 500;
+          if (isLowAccuracy) {
+            toast({
+              title: 'Localização aproximada',
+              description: `Precisão de ${Math.round(accuracy)}m. Revise o endereço antes de buscar.`,
+              variant: 'destructive',
+            });
+          }
           
           // Reverse geocode to get address
           const geoData = await reverseGeocode(latitude, longitude);
@@ -305,33 +316,77 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
 
           const address = geoData.address;
           
-          // Map state abbreviation from Nominatim
+          // Enhanced state mapping - try ISO code first, then match by state name
           const stateCode = address['ISO3166-2-lvl4']?.replace('BR-', '') || '';
-          const stateMatch = brazilianStates.find(s => s.value === stateCode);
+          const stateText = address.state || '';
+          const stateMatch = brazilianStates.find(s => 
+            s.value === stateCode || 
+            s.label.toLowerCase() === stateText.toLowerCase()
+          );
           
-          // Fill form fields
+          // Fill form fields with expanded Nominatim mapping
           if (stateMatch) {
             form.setValue('state', stateMatch.value);
           }
           
-          form.setValue('city', address.city || address.town || address.municipality || address.village || '');
-          form.setValue('neighborhood', address.suburb || address.neighbourhood || address.quarter || '');
-          form.setValue('street', address.road || '');
+          // City - expanded fallback options
+          const city = address.city || address.town || address.city_district || 
+                       address.municipality || address.village || '';
+          form.setValue('city', city);
+          
+          // Neighborhood - expanded fallback options
+          const neighborhood = address.suburb || address.neighbourhood || 
+                               address.quarter || address.hamlet || '';
+          form.setValue('neighborhood', neighborhood);
+          
+          // Street - expanded fallback options
+          const street = address.road || address.pedestrian || address.footway || '';
+          form.setValue('street', street);
+          
+          // House number
           form.setValue('number', address.house_number || '');
           
-          // Try to get CEP from postcode
+          // Try to get CEP from postcode and validate via ViaCEP
           if (address.postcode) {
             const cleanCep = address.postcode.replace(/\D/g, '');
             if (cleanCep.length === 8) {
               const formattedCep = `${cleanCep.slice(0, 5)}-${cleanCep.slice(5, 8)}`;
               form.setValue('cep', formattedCep);
+              
+              // Validate/enrich address with ViaCEP data
+              try {
+                const viaCepResponse = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+                const viaCepData = await viaCepResponse.json();
+                
+                if (!viaCepData.erro) {
+                  // Override with more accurate ViaCEP data if available
+                  if (viaCepData.logradouro) {
+                    form.setValue('street', viaCepData.logradouro);
+                  }
+                  if (viaCepData.bairro) {
+                    form.setValue('neighborhood', viaCepData.bairro);
+                  }
+                  if (viaCepData.localidade) {
+                    form.setValue('city', viaCepData.localidade);
+                  }
+                  const viaCepStateMatch = brazilianStates.find(s => s.value === viaCepData.uf);
+                  if (viaCepStateMatch) {
+                    form.setValue('state', viaCepStateMatch.value);
+                  }
+                }
+              } catch (viaCepError) {
+                devLog.log('ViaCEP validation failed, using Nominatim data:', viaCepError);
+              }
             }
           }
 
           setIsGettingLocation(false);
           
-          // Automatically trigger search
-          form.handleSubmit(onSubmit)();
+          // Show success toast instead of auto-submitting
+          toast({
+            title: 'Endereço preenchido!',
+            description: 'Revise os campos e clique em "Buscar Clínicas".',
+          });
           
         } catch (error) {
           devLog.error('Location error:', error);
@@ -357,11 +412,11 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 15000,
         maximumAge: 0
       }
     );
-  }, [form, locations.length, onError, onSubmit, reverseGeocode]);
+  }, [form, locations.length, onError, reverseGeocode]);
 
   const isDisabled = locations.length === 0;
   const selectedState = form.watch('state');
