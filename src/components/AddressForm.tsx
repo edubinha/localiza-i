@@ -267,7 +267,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                   <FormItem>
                     <FormLabel>CEP</FormLabel>
                     <FormControl>
-                      <div className="relative flex items-center">
+                      <div className="relative flex items-center overflow-hidden">
                         <Input 
                           placeholder="00000-000" 
                           {...field}
@@ -276,6 +276,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                           disabled={isDisabled}
                           inputMode="numeric"
                           pattern="[0-9]{5}-?[0-9]{3}"
+                          autoComplete="off"
                           className={cepError ? 'border-destructive pr-10' : 'pr-10'}
                         />
                         {isFetchingCep && (
@@ -305,6 +306,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                         placeholder="Ex: 123" 
                         {...field} 
                         disabled={isDisabled}
+                        autoComplete="off"
                       />
                     </FormControl>
                     <FormMessage />
@@ -324,6 +326,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                         placeholder="Ex: Rua das Flores" 
                         {...field} 
                         disabled={isDisabled}
+                        autoComplete="off"
                       />
                     </FormControl>
                     <FormMessage />
@@ -343,6 +346,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                         placeholder="Ex: Centro" 
                         {...field} 
                         disabled={isDisabled}
+                        autoComplete="off"
                       />
                     </FormControl>
                     <FormMessage />
