@@ -17,7 +17,6 @@ export type Database = {
       empresas: {
         Row: {
           access_key: string
-          admin_secret: string
           admin_secret_hash: string | null
           created_at: string | null
           google_sheets_url: string | null
@@ -28,7 +27,6 @@ export type Database = {
         }
         Insert: {
           access_key: string
-          admin_secret: string
           admin_secret_hash?: string | null
           created_at?: string | null
           google_sheets_url?: string | null
@@ -39,7 +37,6 @@ export type Database = {
         }
         Update: {
           access_key?: string
-          admin_secret?: string
           admin_secret_hash?: string | null
           created_at?: string | null
           google_sheets_url?: string | null
