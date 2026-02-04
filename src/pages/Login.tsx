@@ -70,9 +70,18 @@ export default function Login() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <div className="relative">
+              <div className="relative overflow-hidden">
                 <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input type="text" placeholder="Digite sua chave de acesso" value={accessKey} onChange={e => setAccessKey(e.target.value)} className="pl-10" disabled={isLoading} autoFocus />
+                <Input 
+                  type="text" 
+                  placeholder="Digite sua chave de acesso" 
+                  value={accessKey} 
+                  onChange={e => setAccessKey(e.target.value)} 
+                  className="pl-10" 
+                  disabled={isLoading} 
+                  autoFocus 
+                  autoComplete="off"
+                />
               </div>
             </div>
 

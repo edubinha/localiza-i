@@ -119,6 +119,7 @@ export function CityAutocomplete({
         placeholder={stateCode ? placeholder : "Selecione o estado primeiro"}
         disabled={disabled || !stateCode}
         className={className}
+        autoComplete="off"
       />
       {isLoading && stateCode && (
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
