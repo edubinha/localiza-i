@@ -258,7 +258,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-lg">Informe o endereço</CardTitle>
+        <CardTitle className="text-lg">Preencha o endereço</CardTitle>
         <Button 
           type="button" 
           variant="ghost"
