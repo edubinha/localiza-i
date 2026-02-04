@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 /* LocalizAI Design System
-   Palette: White, Light Gray, Navy Blue, Emerald Green
+   Palette: White, Soft Gray, Navy Blue, Emerald Green
+   Professional and harmonious color scheme
    All colors MUST be HSL.
 */
 
@@ -18,81 +19,92 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 222 47% 11%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary: Navy Blue - main brand color */
+    --primary: 222 47% 20%;
+    --primary-foreground: 0 0% 100%;
 
+    /* Secondary: Soft warm gray for backgrounds */
     --secondary: 220 14% 96%;
     --secondary-foreground: 222 47% 11%;
 
+    /* Muted: Neutral gray tones */
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 222 47% 11%;
+    /* Accent: Emerald for highlights and success states */
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 222 47% 11%;
+    --ring: 222 47% 20%;
 
     --radius: 0.5rem;
 
-    /* Brand colors */
+    /* Brand semantic colors */
     --navy: 222 47% 20%;
+    --navy-light: 222 47% 35%;
     --emerald: 160 84% 39%;
+    --emerald-light: 160 60% 45%;
 
+    /* Sidebar colors */
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-foreground: 222 47% 20%;
+    --sidebar-primary: 222 47% 20%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 222 47% 20%;
   }
 
   .dark {
     --background: 222 47% 5%;
     --foreground: 210 40% 98%;
 
-    --card: 222 47% 5%;
+    --card: 222 47% 8%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 5%;
+    --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
 
+    /* Primary: Lighter navy for dark mode */
     --primary: 210 40% 98%;
     --primary-foreground: 222 47% 11%;
 
-    --secondary: 217 33% 17%;
+    --secondary: 222 33% 15%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217 33% 17%;
+    --muted: 222 33% 15%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
+    /* Accent: Brighter emerald for dark mode */
+    --accent: 160 70% 45%;
+    --accent-foreground: 222 47% 5%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 213 27% 84%;
+    --border: 222 33% 18%;
+    --input: 222 33% 18%;
+    --ring: 210 40% 80%;
 
-    --navy: 222 47% 40%;
-    --emerald: 160 84% 45%;
+    --navy: 222 47% 45%;
+    --navy-light: 222 47% 55%;
+    --emerald: 160 70% 50%;
+    --emerald-light: 160 60% 55%;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 222 47% 8%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 210 40% 98%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 222 33% 15%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 222 33% 18%;
+    --sidebar-ring: 210 40% 80%;
   }
 }
 
@@ -102,6 +114,6 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
   }
 }

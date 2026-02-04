@@ -57,9 +57,15 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        // Brand colors
-        navy: "hsl(var(--navy))",
-        emerald: "hsl(var(--emerald))",
+        // Brand semantic colors
+        navy: {
+          DEFAULT: "hsl(var(--navy))",
+          light: "hsl(var(--navy-light))",
+        },
+        emerald: {
+          DEFAULT: "hsl(var(--emerald))",
+          light: "hsl(var(--emerald-light))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
