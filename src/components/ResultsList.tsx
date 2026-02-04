@@ -53,8 +53,7 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
   const locationSummary = formatLocation(result.neighborhood, result.city, result.state);
   const fullAddress = formatFullAddress(result.address, result.number, result.neighborhood, result.city, result.state);
   const hasAddressDetails = result.address || result.neighborhood || result.city;
-  const isLaboratory = result.name.toLowerCase().startsWith('laboratório');
-
+  const isOnlyExams = result.services?.toLowerCase() === 'somente exames complementares';
   const handleOpenGoogleMaps = () => {
     const url = buildGoogleMapsUrl(result);
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -71,7 +70,7 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2">
             <h3 className="font-medium text-foreground text-sm sm:text-base leading-tight">{result.name}</h3>
-            {isLaboratory && (
+            {isOnlyExams && (
               <FlaskConical className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
             )}
           </div>
@@ -204,9 +203,9 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
   // Limit to top 3 closest locations
   const topResults = results.slice(0, 3);
   
-  // Check if any of the top results is a laboratory
-  const hasLaboratory = topResults.some(r => 
-    r.name.toLowerCase().startsWith('laboratório')
+  // Check if any of the top results is only for exams
+  const hasOnlyExams = topResults.some(r => 
+    r.services?.toLowerCase() === 'somente exames complementares'
   );
 
   return (
@@ -224,7 +223,7 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
             <span>Busca realizada utilizando: <strong>{searchInfo}</strong></span>
           </div>
         )}
-        {hasLaboratory && (
+        {hasOnlyExams && (
           <Alert className="bg-blue-50 border-blue-200">
             <FlaskConical className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-800 text-sm">
