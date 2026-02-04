@@ -60,7 +60,7 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img alt="LocalizAI" className="h-10" src="/lovable-uploads/6cf1aa4f-e020-4f7d-8342-296d80b25f83.png" />
+            <img alt="LocalizAI" className="h-10" src="/lovable-uploads/5608a2a6-31a9-4c54-a2ad-6365d48dfc74.png" />
           </div>
           <CardTitle className="text-xl">Acesso à Plataforma</CardTitle>
           <CardDescription>
