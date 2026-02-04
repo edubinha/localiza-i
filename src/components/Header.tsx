@@ -17,7 +17,7 @@ export function Header() {
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img alt="LocalizAI" className="h-8" src="/lovable-uploads/10f1a488-ddc8-48fe-b3ee-e2178de730da.png" />
+            <img alt="LocalizAI" className="h-8" src="/lovable-uploads/98516649-6656-401c-bc91-54fd72799fbf.png" />
             {empresa && <>
                 <span className="text-muted-foreground">|</span>
                 <span className="text-lg font-medium text-foreground">{empresa.nome}</span>
