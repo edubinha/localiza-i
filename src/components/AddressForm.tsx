@@ -273,7 +273,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
   const selectedState = form.watch('state');
 
   return (
-    <Card>
+    <Card className="rounded-xl">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-lg">Preencha o endereço</CardTitle>
         <Button 
@@ -455,7 +455,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
 
             <Button 
               type="submit" 
-              className="w-full bg-navy hover:bg-navy/90" 
+              className="w-full bg-navy hover:bg-navy/90 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]" 
               disabled={isDisabled || isSearching}
             >
               {isSearching ? (
