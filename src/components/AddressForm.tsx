@@ -28,7 +28,7 @@ import { geocodeAddress } from '@/lib/geocoding';
 import { calculateRoutes, type RouteResult } from '@/lib/routing';
 import { CityAutocomplete } from '@/components/CityAutocomplete';
 import type { LocationData } from '@/lib/spreadsheet';
-import { supabase } from '@/integrations/supabase/client';
+
 
 interface ViaCepResponse {
   cep: string;
@@ -100,35 +100,26 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
       return;
     }
 
-    if (!empresa?.id) {
-      setCepError('Sessão da empresa não encontrada.');
-      return;
-    }
-
     setIsFetchingCep(true);
     setCepError(null);
 
     try {
-      // Use server-side edge function for CEP lookup (SSRF protection)
-      const { data, error } = await supabase.functions.invoke('lookup-cep', {
-        body: {
-          cep: cleanCep,
-          empresaId: empresa.id,
-        },
-      });
-
-      if (error) {
-        devLog.error('Error fetching CEP:', error);
+      // Direct API call for instant response
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      
+      if (!response.ok) {
         setCepError('Erro ao buscar CEP. Preencha o endereço manualmente.');
         return;
       }
 
-      if (data.notFound || data.error) {
+      const data = await response.json();
+
+      if (data.erro) {
         setCepError('CEP não encontrado. Preencha o endereço manualmente.');
         return;
       }
 
-      // Auto-fill the form fields from server response
+      // Auto-fill the form fields
       form.setValue('street', data.logradouro || '');
       form.setValue('neighborhood', data.bairro || '');
       
@@ -148,7 +139,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
     } finally {
       setIsFetchingCep(false);
     }
-  }, [form, empresa?.id]);
+  }, [form]);
 
   const handleCepChange = useCallback((value: string) => {
     // Format CEP as user types (00000-000)
