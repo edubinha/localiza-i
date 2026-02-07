@@ -14,17 +14,23 @@ const devLog = {
   },
 };
 
-// CORS configuration - explicit allowlist for production domains
+// CORS configuration - allowlist for production and preview domains
 const ALLOWED_ORIGINS = [
   'https://localiza-i.lovable.app',
-  'https://id-preview--dd0f1f18-b3a6-40c0-a96b-4abaaca86b05.lovable.app',
   'http://localhost:5173',
   'http://localhost:8080',
 ];
 
+// Pattern for Lovable preview domains
+const LOVABLE_PREVIEW_PATTERN = /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/;
+const LOVABLE_PREVIEW_ID_PATTERN = /^https:\/\/id-preview--[a-z0-9-]+\.lovable\.app$/;
+
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
-  return ALLOWED_ORIGINS.includes(origin);
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  if (LOVABLE_PREVIEW_PATTERN.test(origin)) return true;
+  if (LOVABLE_PREVIEW_ID_PATTERN.test(origin)) return true;
+  return false;
 }
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
