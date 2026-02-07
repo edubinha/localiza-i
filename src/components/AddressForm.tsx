@@ -4,7 +4,7 @@ import { devLog } from '@/lib/logger';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Search, Loader2, Eraser } from 'lucide-react';
+import { Search, Loader2, Eraser, Crosshair } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ import { geocodeAddress } from '@/lib/geocoding';
 import { calculateRoutes, type RouteResult } from '@/lib/routing';
 import { CityAutocomplete } from '@/components/CityAutocomplete';
 import type { LocationData } from '@/lib/spreadsheet';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface ViaCepResponse {
@@ -77,8 +78,10 @@ interface AddressFormProps {
 
 export function AddressForm({ locations, onResults, onError, onSearchStart }: AddressFormProps) {
   const { empresa } = useEmpresa();
+  const { toast } = useToast();
   const [isSearching, setIsSearching] = useState(false);
   const [isFetchingCep, setIsFetchingCep] = useState(false);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
 
   const form = useForm<AddressFormData>({
@@ -159,6 +162,152 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
       setCepError(null);
     }
   }, [form, fetchAddressByCep]);
+
+  // Reverse geocoding using Nominatim
+  const reverseGeocode = useCallback(async (lat: number, lon: number) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'LocalizAI/1.0',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Erro ao obter endereço');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      devLog.error('Reverse geocoding error:', error);
+      throw error;
+    }
+  }, []);
+
+  // Geolocation handler
+  const handleGeolocation = useCallback(async () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: 'Geolocalização não suportada',
+        description: 'Seu navegador não suporta geolocalização.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsFetchingLocation(true);
+    setCepError(null);
+
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+      devLog.log('Geolocation obtained:', { latitude, longitude });
+
+      // Reverse geocode the coordinates
+      const addressData = await reverseGeocode(latitude, longitude);
+      
+      if (!addressData || !addressData.address) {
+        throw new Error('Não foi possível obter o endereço');
+      }
+
+      const address = addressData.address;
+      devLog.log('Reverse geocode result:', address);
+
+      // Fill form fields
+      const street = address.road || address.pedestrian || address.street || '';
+      const neighborhood = address.suburb || address.neighbourhood || address.district || '';
+      const city = address.city || address.town || address.municipality || address.village || '';
+      const stateAbbr = address.state;
+
+      form.setValue('street', street);
+      form.setValue('neighborhood', neighborhood);
+      form.setValue('city', city);
+
+      // Find state by name and set it
+      if (stateAbbr) {
+        const stateMatch = brazilianStates.find(
+          s => s.label.toLowerCase() === stateAbbr.toLowerCase() || 
+               s.value.toLowerCase() === stateAbbr.toLowerCase()
+        );
+        if (stateMatch) {
+          form.setValue('state', stateMatch.value);
+        }
+      }
+
+      // Try to get CEP from postcode field
+      const postcode = address.postcode;
+      if (postcode) {
+        const cleanPostcode = postcode.replace(/\D/g, '');
+        if (cleanPostcode.length === 8) {
+          const formattedCep = `${cleanPostcode.slice(0, 5)}-${cleanPostcode.slice(5)}`;
+          form.setValue('cep', formattedCep);
+        } else {
+          // Focus CEP field if postcode is incomplete
+          setTimeout(() => {
+            const cepInput = document.querySelector('input[name="cep"]') as HTMLInputElement;
+            cepInput?.focus();
+          }, 100);
+        }
+      } else {
+        // Focus CEP field if no postcode
+        setTimeout(() => {
+          const cepInput = document.querySelector('input[name="cep"]') as HTMLInputElement;
+          cepInput?.focus();
+        }, 100);
+      }
+
+      toast({
+        title: 'Localização obtida',
+        description: 'Endereço preenchido automaticamente.',
+      });
+    } catch (error) {
+      devLog.error('Geolocation error:', error);
+      
+      if (error instanceof GeolocationPositionError) {
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast({
+              title: 'Permissão negada',
+              description: 'Ative a localização nas configurações do navegador para usar este recurso.',
+              variant: 'destructive',
+            });
+            break;
+          case error.POSITION_UNAVAILABLE:
+            toast({
+              title: 'Localização indisponível',
+              description: 'Não foi possível obter sua localização. Tente novamente.',
+              variant: 'destructive',
+            });
+            break;
+          case error.TIMEOUT:
+            toast({
+              title: 'Tempo esgotado',
+              description: 'A obtenção da localização demorou muito. Tente novamente.',
+              variant: 'destructive',
+            });
+            break;
+        }
+      } else {
+        toast({
+          title: 'Erro ao obter localização',
+          description: 'Não foi possível obter seu endereço. Preencha manualmente.',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setIsFetchingLocation(false);
+    }
+  }, [form, reverseGeocode, toast]);
 
   const buildOriginAddress = (data: AddressFormData): string => {
     const stateName = brazilianStates.find(s => s.value === data.state)?.label || data.state;
@@ -293,7 +442,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* CEP Field - First field */}
+              {/* CEP Field with Geolocation - First field */}
               <FormField
                 control={form.control}
                 name="cep"
@@ -301,23 +450,39 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                   <FormItem>
                     <FormLabel>CEP</FormLabel>
                     <FormControl>
-                      <div className="relative flex items-center overflow-hidden">
+                      <div className="relative flex items-center">
                         <Input 
                           placeholder="00000-000" 
                           {...field}
                           onChange={(e) => handleCepChange(e.target.value)}
                           maxLength={9}
-                          disabled={isDisabled}
+                          disabled={isDisabled || isFetchingLocation}
                           inputMode="numeric"
                           pattern="[0-9]{5}-?[0-9]{3}"
                           autoComplete="off"
-                          className={cepError ? 'border-destructive pr-10' : 'pr-10'}
+                          className={`pr-20 shadow-sm rounded-lg focus:ring-2 focus:ring-primary/20 ${cepError ? 'border-destructive' : ''}`}
                         />
-                        {isFetchingCep && (
-                          <div className="absolute right-3 flex items-center justify-center">
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          </div>
-                        )}
+                        <div className="absolute right-2 flex items-center gap-1">
+                          {isFetchingCep && (
+                            <div className="flex items-center justify-center p-1">
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleGeolocation}
+                            disabled={isDisabled || isFetchingLocation || isFetchingCep}
+                            className="flex items-center justify-center p-2 min-w-[40px] min-h-[40px] rounded-md transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Usar minha localização"
+                            aria-label="Usar minha localização"
+                          >
+                            {isFetchingLocation ? (
+                              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                            ) : (
+                              <Crosshair className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </FormControl>
                     {cepError && (
