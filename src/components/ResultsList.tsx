@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { SearchResult } from '@/components/AddressForm';
 import { cn } from '@/lib/utils';
+import { ResultsListSkeleton } from '@/components/ResultCardSkeleton';
 
 interface ResultsListProps {
   results: SearchResult[];
@@ -158,18 +159,18 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
     if (isLoading) {
       return (
         <Card ref={ref} className="rounded-xl">
-        <CardHeader>
-          <CardTitle className="text-lg">Buscando locais...</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center py-8">
-            <div className="h-12 w-12 rounded-full border-4 border-muted border-t-navy animate-spin mb-4" />
-            <p className="text-muted-foreground">Calculando rotas...</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Navigation className="h-5 w-5 text-emerald" />
+              Buscando clínicas...
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResultsListSkeleton count={3} />
+          </CardContent>
+        </Card>
+      );
+    }
 
   if (error) {
     return (

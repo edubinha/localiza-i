@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface City {
   nome: string;
@@ -27,8 +28,12 @@ export function CityAutocomplete({
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [allCities, setAllCities] = useState<string[]>([]);
+  const [inputValue, setInputValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Debounce the input value for filtering
+  const debouncedInputValue = useDebounce(inputValue, 300);
 
   // Fetch cities when state changes
   useEffect(() => {
@@ -79,14 +84,25 @@ export function CityAutocomplete({
     [allCities]
   );
 
+  // Filter cities when debounced value changes
+  useEffect(() => {
+    filterCities(debouncedInputValue);
+  }, [debouncedInputValue, filterCities]);
+
+  // Sync inputValue with external value changes (e.g., from CEP lookup)
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
+    setInputValue(newValue);
     onChange(newValue);
-    filterCities(newValue);
     setIsOpen(true);
   };
 
   const handleSelectCity = (city: string) => {
+    setInputValue(city);
     onChange(city);
     setSuggestions([]);
     setIsOpen(false);
@@ -111,7 +127,7 @@ export function CityAutocomplete({
     <div ref={containerRef} className="relative">
       <Input
         ref={inputRef}
-        value={value}
+        value={inputValue}
         onChange={handleInputChange}
         onFocus={() => {
           if (suggestions.length > 0) setIsOpen(true);
