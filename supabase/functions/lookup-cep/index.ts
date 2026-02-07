@@ -202,13 +202,14 @@ serve(async (req) => {
     const data: ViaCepResponse = await response.json();
 
     if (data.erro) {
+      // Return 200 with notFound flag - the request succeeded, CEP just doesn't exist
       return new Response(
         JSON.stringify({ 
-          error: "CEP não encontrado",
-          notFound: true 
+          notFound: true,
+          error: "CEP não encontrado"
         }),
         {
-          status: 404,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
