@@ -1,9 +1,10 @@
 import { useState, forwardRef } from 'react';
-import { MapPin, Navigation, Info, ChevronDown, ChevronUp, FlaskConical, ExternalLink } from 'lucide-react';
+import { MapPin, Navigation, Info, ChevronDown, ChevronUp, FlaskConical, ExternalLink, MapPinned } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { SearchResult } from '@/components/AddressForm';
+import { cn } from '@/lib/utils';
 
 interface ResultsListProps {
   results: SearchResult[];
@@ -39,12 +40,12 @@ function buildGoogleMapsUrl(result: SearchResult): string {
   
   const origin = result.originAddress || '';
   
-  // URL for Google Maps directions
+  // Universal Google Maps URL format - opens app on mobile devices
   const baseUrl = 'https://www.google.com/maps/dir/';
   const encodedOrigin = encodeURIComponent(origin);
   const encodedDestination = encodeURIComponent(destination + ', Brasil');
   
-  return `${baseUrl}${encodedOrigin}/${encodedDestination}`;
+  return `${baseUrl}?api=1&origin=${encodedOrigin}&destination=${encodedDestination}`;
 }
 
 function ResultItem({ result, index }: { result: SearchResult; index: number }) {
@@ -61,7 +62,11 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
 
   return (
     <div
-      className="flex flex-col gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+      className={cn(
+        "flex flex-col gap-2 p-4 rounded-xl bg-white shadow-sm border-l-4 border-l-emerald",
+        "hover:shadow-md transition-all duration-200 animate-fade-in-up"
+      )}
+      style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
     >
       <div className="flex items-start gap-3 sm:gap-4">
         <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-navy/10 flex items-center justify-center">
@@ -69,7 +74,7 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2">
-            <h3 className="font-medium text-foreground text-sm sm:text-base leading-tight">{result.name}</h3>
+            <h3 className="font-semibold text-navy text-sm sm:text-base leading-tight">{result.name}</h3>
             {isOnlyExams && (
               <FlaskConical className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
             )}
@@ -152,7 +157,7 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
   function ResultsList({ results, isLoading, error }, ref) {
     if (isLoading) {
       return (
-        <Card ref={ref}>
+        <Card ref={ref} className="rounded-xl">
         <CardHeader>
           <CardTitle className="text-lg">Buscando locais...</CardTitle>
         </CardHeader>
@@ -168,7 +173,7 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
 
   if (error) {
     return (
-      <Card ref={ref} className="border-destructive/50">
+      <Card ref={ref} className="rounded-xl border-destructive/50">
         <CardHeader>
           <CardTitle className="text-lg text-destructive">Erro na busca</CardTitle>
         </CardHeader>
@@ -181,17 +186,21 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
 
   if (results.length === 0 && !isLoading && !error) {
     return (
-      <Card ref={ref}>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Navigation className="h-5 w-5 text-muted-foreground" />
-            Nenhuma clínica encontrada
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center py-6">
-          <p className="text-muted-foreground">
-            Não foi localizada nenhuma clínica dentro do raio de 40km.
-          </p>
+      <Card ref={ref} className="rounded-xl">
+        <CardContent className="text-center py-10">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center">
+              <MapPinned className="h-8 w-8 text-muted-foreground/50" />
+            </div>
+            <div>
+              <h3 className="text-lg font-medium text-foreground mb-1">
+                Nenhuma clínica encontrada
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Não foi localizada nenhuma clínica dentro do raio de 40km.
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -209,7 +218,7 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
   );
 
   return (
-    <Card ref={ref}>
+    <Card ref={ref} className="rounded-xl">
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Navigation className="h-5 w-5 text-emerald" />

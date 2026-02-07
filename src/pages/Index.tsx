@@ -5,9 +5,26 @@ import { ResultsList } from '@/components/ResultsList';
 import { useEmpresa } from '@/hooks/useEmpresa';
 import { parseSpreadsheetText, type LocationData } from '@/lib/spreadsheet';
 import { extractGoogleSheetsCsvUrl } from '@/lib/googleSheets';
-import { Loader2, AlertCircle, FileSpreadsheet, RefreshCw } from 'lucide-react';
+import { Loader2, AlertCircle, FileSpreadsheet, RefreshCw, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+
+const formatRelativeTime = (date: Date): string => {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  
+  if (diffMins < 1) return 'agora mesmo';
+  if (diffMins === 1) return 'há 1 minuto';
+  if (diffMins < 60) return `há ${diffMins} minutos`;
+  
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours === 1) return 'há 1 hora';
+  if (diffHours < 24) return `há ${diffHours} horas`;
+  
+  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+};
+
 const Index = () => {
   const {
     empresa
@@ -23,6 +40,7 @@ const Index = () => {
   const [isLoadingSheet, setIsLoadingSheet] = useState(false);
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [sheetName, setSheetName] = useState<string | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const loadSheetData = useCallback(async () => {
     if (!empresa?.google_sheets_url) {
       setSheetError('Nenhuma planilha configurada. Acesse as configurações para vincular uma planilha.');
@@ -53,6 +71,7 @@ const Index = () => {
       }
       setLocations(result.data);
       setSheetName(result.sheetName || null);
+      setLastSyncTime(new Date());
       setResults([]);
       setHasSearched(false);
     } catch (error) {
@@ -92,7 +111,7 @@ const Index = () => {
     setIsSearching(false);
     setResults([]);
   };
-  return <div className="min-h-screen bg-secondary/30">
+  return <div className="min-h-screen bg-slate-50">
       <Header />
       
       <main className="container mx-auto px-4 py-8">
@@ -108,7 +127,7 @@ const Index = () => {
           </div>
 
           {/* Sheet Status */}
-          <Card>
+          <Card className="rounded-xl">
             <CardContent className="py-4">
               {isLoadingSheet ? <div className="flex items-center justify-center gap-3 text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -132,6 +151,12 @@ const Index = () => {
                       <p className="text-sm text-muted-foreground">
                         {locations.length} {locations.length === 1 ? 'prestador disponível' : 'prestadores disponíveis'}
                       </p>
+                      {lastSyncTime && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          Última sincronização: {formatRelativeTime(lastSyncTime)}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <Button variant="ghost" size="sm" onClick={loadSheetData} title="Atualizar dados">
