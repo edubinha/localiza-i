@@ -4,7 +4,7 @@ import { devLog } from '@/lib/logger';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Search, Loader2, Eraser, Crosshair } from 'lucide-react';
+import { Search, Loader2, Eraser, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -479,7 +479,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                             {isFetchingLocation ? (
                               <Loader2 className="h-5 w-5 animate-spin text-primary" />
                             ) : (
-                              <Crosshair className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
+                              <MapPin className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
                             )}
                           </button>
                         </div>
