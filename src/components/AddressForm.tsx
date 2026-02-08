@@ -83,7 +83,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
   const [isSearching, setIsSearching] = useState(false);
   const [isFetchingCep, setIsFetchingCep] = useState(false);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
-  const [searchRadius, setSearchRadius] = useState(40);
+  const [searchRadius, setSearchRadius] = useState(10);
   const [cepError, setCepError] = useState<string | null>(null);
 
   const form = useForm<AddressFormData>({
@@ -618,7 +618,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                 <span className="text-sm font-medium text-foreground">
                   Distância máxima:{' '}
                   <span className="text-navy font-semibold">
-                    {searchRadius >= 50 ? '> 50 km' : `${searchRadius} km`}
+                    {searchRadius} km
                   </span>
                 </span>
               </div>
