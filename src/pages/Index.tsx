@@ -3,7 +3,8 @@ import { Header } from '@/components/Header';
 import { AddressForm, type SearchResult } from '@/components/AddressForm';
 import { ResultsList } from '@/components/ResultsList';
 import { useEmpresa } from '@/hooks/useEmpresa';
-import { parseSpreadsheetText, type LocationData } from '@/lib/spreadsheet';
+import { useLocationsCache } from '@/hooks/useLocationsCache';
+import { parseSpreadsheetText } from '@/lib/spreadsheet';
 import { extractGoogleSheetsCsvUrl } from '@/lib/googleSheets';
 import { Loader2, AlertCircle, FileSpreadsheet, RefreshCw, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,10 +27,15 @@ const formatRelativeTime = (date: Date): string => {
 };
 
 const Index = () => {
-  const {
-    empresa
-  } = useEmpresa();
-  const [locations, setLocations] = useState<LocationData[]>([]);
+  const { empresa } = useEmpresa();
+  
+  // Centralized location cache with in-memory filtering
+  const { 
+    locations, 
+    setLocations, 
+    totalCount 
+  } = useLocationsCache();
+  
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -41,22 +47,33 @@ const Index = () => {
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [sheetName, setSheetName] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const loadSheetData = useCallback(async () => {
+  const hasLoadedRef = useRef(false);
+  // Load sheet data - only once on mount or when URL changes
+  const loadSheetData = useCallback(async (forceRefresh = false) => {
     if (!empresa?.google_sheets_url) {
       setSheetError('Nenhuma planilha configurada. Acesse as configurações para vincular uma planilha.');
       return;
     }
+
+    // Skip if already loaded and not forcing refresh
+    if (hasLoadedRef.current && !forceRefresh && locations.length > 0) {
+      return;
+    }
+
     setIsLoadingSheet(true);
     setSheetError(null);
+
     try {
       const csvUrl = extractGoogleSheetsCsvUrl(empresa.google_sheets_url);
       if (!csvUrl) {
         throw new Error('URL da planilha inválida.');
       }
+
       const response = await fetch(csvUrl);
       if (!response.ok) {
         throw new Error('Não foi possível acessar a planilha. Verifique se ela está publicada na web.');
       }
+
       const csvText = await response.text();
 
       // Check if it's HTML (not published as CSV)
@@ -69,24 +86,32 @@ const Index = () => {
       if (!result.success) {
         throw new Error(result.error || 'Erro ao processar a planilha.');
       }
+
+      // Store in cache - data is now available for instant filtering
       setLocations(result.data);
       setSheetName(result.sheetName || null);
       setLastSyncTime(new Date());
+      hasLoadedRef.current = true;
+      
+      // Clear previous search results on data refresh
       setResults([]);
       setHasSearched(false);
     } catch (error) {
       console.error('Error loading sheet:', error);
       setSheetError(error instanceof Error ? error.message : 'Erro ao carregar planilha.');
       setLocations([]);
+      hasLoadedRef.current = false;
     } finally {
       setIsLoadingSheet(false);
     }
-  }, [empresa?.google_sheets_url]);
+  }, [empresa?.google_sheets_url, locations.length, setLocations]);
 
-  // Load sheet data on mount and when google_sheets_url changes
+  // Load sheet data only once on mount
   useEffect(() => {
-    loadSheetData();
-  }, [loadSheetData]);
+    if (empresa?.google_sheets_url && !hasLoadedRef.current) {
+      loadSheetData();
+    }
+  }, [empresa?.google_sheets_url, loadSheetData]);
   const handleSearchStart = () => {
     setIsSearching(true);
     setSearchError(null);
@@ -137,7 +162,7 @@ const Index = () => {
                     <AlertCircle className="h-5 w-5" />
                     <span>{sheetError}</span>
                   </div>
-                  <Button variant="outline" size="sm" onClick={loadSheetData}>
+                  <Button variant="outline" size="sm" onClick={() => loadSheetData()}>
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Tentar novamente
                   </Button>
@@ -149,7 +174,7 @@ const Index = () => {
                         {sheetName || 'Planilha de Prestadores'}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {locations.length} {locations.length === 1 ? 'prestador disponível' : 'prestadores disponíveis'}
+                        {totalCount} {totalCount === 1 ? 'prestador disponível' : 'prestadores disponíveis'}
                       </p>
                       {lastSyncTime && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
@@ -159,7 +184,12 @@ const Index = () => {
                       )}
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={loadSheetData} title="Atualizar dados">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => loadSheetData(true)} 
+                    title="Atualizar dados da planilha"
+                  >
                     <RefreshCw className="h-4 w-4" />
                   </Button>
                 </div>}
@@ -167,7 +197,7 @@ const Index = () => {
           </Card>
 
           {/* Address Form - Only show when sheet is loaded */}
-          {!isLoadingSheet && !sheetError && locations.length > 0 && <section>
+          {!isLoadingSheet && !sheetError && totalCount > 0 && <section>
               <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                 <span className="h-6 w-6 rounded-full bg-navy text-primary-foreground flex items-center justify-center text-xs font-bold">1</span>
                 Informe o endereço
