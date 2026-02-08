@@ -8,6 +8,7 @@ import { Search, Loader2, Eraser, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
 import {
   Form,
   FormControl,
@@ -82,6 +83,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
   const [isSearching, setIsSearching] = useState(false);
   const [isFetchingCep, setIsFetchingCep] = useState(false);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+  const [searchRadius, setSearchRadius] = useState(40);
   const [cepError, setCepError] = useState<string | null>(null);
 
   const form = useForm<AddressFormData>({
@@ -370,8 +372,9 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
 
       const originAddress = buildOriginAddress(data);
 
-      // Map to SearchResult format and filter locations > 40km
-      const MAX_DISTANCE_KM = 40;
+      // Map to SearchResult format and filter by search radius
+      // If radius is 100km (max), show all results without filtering
+      const isUnlimited = searchRadius >= 100;
       const sortedLocations = routeResults
         .map((route: RouteResult) => ({
           name: route.name,
@@ -388,7 +391,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
           services: route.services,
           originAddress,
         }))
-        .filter((location) => location.distance <= MAX_DISTANCE_KM);
+        .filter((location) => isUnlimited || location.distance <= searchRadius);
 
       onResults(sortedLocations);
     } catch (error) {
@@ -607,6 +610,31 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Search Radius Slider */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-foreground">
+                  Distância máxima:{' '}
+                  <span className="text-navy font-semibold">
+                    {searchRadius >= 100 ? '> 100 km' : `${searchRadius} km`}
+                  </span>
+                </span>
+              </div>
+              <Slider
+                value={[searchRadius]}
+                onValueChange={(values) => setSearchRadius(values[0])}
+                min={5}
+                max={100}
+                step={5}
+                disabled={isDisabled}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>5 km</span>
+                <span>100 km</span>
+              </div>
             </div>
 
             <Button 
