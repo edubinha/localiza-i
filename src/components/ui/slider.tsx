@@ -27,17 +27,25 @@ const Slider = React.forwardRef<
       </SliderPrimitive.Track>
       <SliderPrimitive.Thumb 
         className={cn(
-          "relative block h-5 w-5 rounded-full border-2 border-navy bg-white shadow-md",
+          "relative block rounded-full border-2 border-navy bg-white shadow-md",
           "transition-all duration-200 ease-out",
-          "hover:scale-125 hover:shadow-lg hover:shadow-navy/30",
           "focus-visible:outline-none",
           "disabled:pointer-events-none disabled:opacity-50",
-          "cursor-grab active:cursor-grabbing active:scale-110"
+          "cursor-grab active:cursor-grabbing"
         )}
+        style={{
+          width: isDragging ? 26 : isHovering ? 25 : 20,
+          height: isDragging ? 26 : isHovering ? 25 : 20,
+          boxShadow: isHovering || isDragging 
+            ? '0 10px 15px -3px rgba(30, 41, 59, 0.3), 0 4px 6px -4px rgba(30, 41, 59, 0.2)' 
+            : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        }}
         onPointerDown={() => setIsDragging(true)}
         onPointerUp={() => setIsDragging(false)}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
+        onTouchStart={() => { setIsHovering(true); setIsDragging(true); }}
+        onTouchEnd={() => { setIsHovering(false); setIsDragging(false); }}
       >
         {showTooltip && showValue && (
           <div className="absolute -top-9 left-1/2 -translate-x-1/2 animate-in fade-in-0 zoom-in-95 duration-150">
