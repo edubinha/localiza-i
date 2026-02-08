@@ -272,16 +272,6 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
             Ver mais ({remainingCount} {remainingCount === 1 ? 'clínica' : 'clínicas'})
           </Button>
         )}
-        {visibleCount > INITIAL_VISIBLE_COUNT && (
-          <Button
-            variant="ghost"
-            className="w-full mt-2"
-            onClick={handleShowLess}
-          >
-            <ChevronUp className="h-4 w-4 mr-2" />
-            Mostrar menos
-          </Button>
-        )}
       </CardContent>
     </Card>
   );
