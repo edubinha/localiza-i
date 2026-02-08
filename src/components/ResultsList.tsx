@@ -1,5 +1,5 @@
 import { useState, forwardRef } from 'react';
-import { MapPin, Navigation, Info, ChevronDown, ChevronUp, FlaskConical, ExternalLink, MapPinned } from 'lucide-react';
+import { MapPin, Navigation, Info, ChevronDown, ChevronUp, FlaskConical, MapPinned } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -48,6 +48,8 @@ function buildGoogleMapsUrl(result: SearchResult): string {
   
   return `${baseUrl}?api=1&origin=${encodedOrigin}&destination=${encodedDestination}`;
 }
+
+const INITIAL_VISIBLE_COUNT = 5;
 
 function ResultItem({ result, index }: { result: SearchResult; index: number }) {
   const [showFullAddress, setShowFullAddress] = useState(false);
@@ -145,8 +147,8 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
             onClick={handleOpenGoogleMaps}
             className="w-full sm:w-auto"
           >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Abrir no Google Maps
+            <Navigation className="h-4 w-4 mr-2" />
+            Como chegar
           </Button>
         </div>
       )}
@@ -156,6 +158,8 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
 
 export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
   function ResultsList({ results, isLoading, error }, ref) {
+    const [showAll, setShowAll] = useState(false);
+    
     if (isLoading) {
       return (
         <Card ref={ref} className="rounded-xl">
@@ -210,11 +214,13 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
   // Check if any result used fallback search
   const searchInfo = results.find(r => r.searchInfo)?.searchInfo;
   
-  // Limit to top 3 closest locations
-  const topResults = results.slice(0, 3);
+  // Show all results or limit to initial count
+  const visibleResults = showAll ? results : results.slice(0, INITIAL_VISIBLE_COUNT);
+  const hasMoreResults = results.length > INITIAL_VISIBLE_COUNT;
+  const remainingCount = results.length - INITIAL_VISIBLE_COUNT;
   
-  // Check if any of the top results is only for exams
-  const hasOnlyExams = topResults.some(r => 
+  // Check if any of the visible results is only for exams
+  const hasOnlyExams = visibleResults.some(r => 
     r.services?.toLowerCase() === 'somente exames complementares'
   );
 
@@ -224,6 +230,9 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
         <CardTitle className="text-lg flex items-center gap-2">
           <Navigation className="h-5 w-5 text-emerald" />
           Clínicas mais próximas
+          <span className="text-sm font-normal text-muted-foreground">
+            ({results.length} {results.length === 1 ? 'resultado' : 'resultados'})
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -241,9 +250,29 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
             </AlertDescription>
           </Alert>
         )}
-        {topResults.map((result, index) => (
+        {visibleResults.map((result, index) => (
           <ResultItem key={`${result.name}-${index}`} result={result} index={index} />
         ))}
+        {hasMoreResults && !showAll && (
+          <Button
+            variant="outline"
+            className="w-full mt-2"
+            onClick={() => setShowAll(true)}
+          >
+            <ChevronDown className="h-4 w-4 mr-2" />
+            Ver mais ({remainingCount} {remainingCount === 1 ? 'clínica' : 'clínicas'})
+          </Button>
+        )}
+        {showAll && hasMoreResults && (
+          <Button
+            variant="ghost"
+            className="w-full mt-2"
+            onClick={() => setShowAll(false)}
+          >
+            <ChevronUp className="h-4 w-4 mr-2" />
+            Mostrar menos
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
