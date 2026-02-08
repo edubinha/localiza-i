@@ -627,7 +627,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                 onValueChange={(values) => setSearchRadius(values[0])}
                 min={5}
                 max={100}
-                step={5}
+                step={1}
                 disabled={isDisabled}
                 className="w-full"
               />
