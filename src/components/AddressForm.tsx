@@ -373,8 +373,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
       const originAddress = buildOriginAddress(data);
 
       // Map to SearchResult format and filter by search radius
-      // If radius is 100km (max), show all results without filtering
-      const isUnlimited = searchRadius >= 50;
+      // Always apply the search radius filter (max is 50km)
       const sortedLocations = routeResults
         .map((route: RouteResult) => ({
           name: route.name,
@@ -391,7 +390,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
           services: route.services,
           originAddress,
         }))
-        .filter((location) => isUnlimited || location.distance <= searchRadius);
+        .filter((location) => location.distance <= searchRadius);
 
       onResults(sortedLocations);
     } catch (error) {
