@@ -49,7 +49,8 @@ function buildGoogleMapsUrl(result: SearchResult): string {
   return `${baseUrl}?api=1&origin=${encodedOrigin}&destination=${encodedDestination}`;
 }
 
-const INITIAL_VISIBLE_COUNT = 5;
+const INITIAL_VISIBLE_COUNT = 3;
+const INCREMENT_COUNT = 5;
 
 function ResultItem({ result, index }: { result: SearchResult; index: number }) {
   const [showFullAddress, setShowFullAddress] = useState(false);
@@ -158,7 +159,7 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
 
 export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
   function ResultsList({ results, isLoading, error }, ref) {
-    const [showAll, setShowAll] = useState(false);
+    const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
     
     if (isLoading) {
       return (
@@ -214,10 +215,18 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
   // Check if any result used fallback search
   const searchInfo = results.find(r => r.searchInfo)?.searchInfo;
   
-  // Show all results or limit to initial count
-  const visibleResults = showAll ? results : results.slice(0, INITIAL_VISIBLE_COUNT);
-  const hasMoreResults = results.length > INITIAL_VISIBLE_COUNT;
-  const remainingCount = results.length - INITIAL_VISIBLE_COUNT;
+  // Show results up to visible count
+  const visibleResults = results.slice(0, visibleCount);
+  const hasMoreResults = visibleCount < results.length;
+  const remainingCount = results.length - visibleCount;
+  
+  const handleShowMore = () => {
+    setVisibleCount(prev => Math.min(prev + INCREMENT_COUNT, results.length));
+  };
+  
+  const handleShowLess = () => {
+    setVisibleCount(INITIAL_VISIBLE_COUNT);
+  };
   
   // Check if any of the visible results is only for exams
   const hasOnlyExams = visibleResults.some(r => 
@@ -253,21 +262,21 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
         {visibleResults.map((result, index) => (
           <ResultItem key={`${result.name}-${index}`} result={result} index={index} />
         ))}
-        {hasMoreResults && !showAll && (
+        {hasMoreResults && (
           <Button
             variant="outline"
             className="w-full mt-2"
-            onClick={() => setShowAll(true)}
+            onClick={handleShowMore}
           >
             <ChevronDown className="h-4 w-4 mr-2" />
             Ver mais ({remainingCount} {remainingCount === 1 ? 'clínica' : 'clínicas'})
           </Button>
         )}
-        {showAll && hasMoreResults && (
+        {visibleCount > INITIAL_VISIBLE_COUNT && (
           <Button
             variant="ghost"
             className="w-full mt-2"
-            onClick={() => setShowAll(false)}
+            onClick={handleShowLess}
           >
             <ChevronUp className="h-4 w-4 mr-2" />
             Mostrar menos
