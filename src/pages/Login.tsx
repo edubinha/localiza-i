@@ -81,11 +81,19 @@ export default function Login() {
                 <span>{error}</span>
               </div>}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? <>
+            <Button 
+              type="submit" 
+              className="w-full bg-navy hover:bg-navy/90 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]" 
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Validando...
-                </> : 'Entrar'}
+                </>
+              ) : (
+                'Entrar'
+              )}
             </Button>
           </form>
         </CardContent>
