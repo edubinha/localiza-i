@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { SearchResult } from '@/components/AddressForm';
 import { cn } from '@/lib/utils';
 import { ResultsListSkeleton } from '@/components/ResultCardSkeleton';
+import { NavigationMenu } from '@/components/NavigationMenu';
 
 interface ResultsListProps {
   results: SearchResult[];
@@ -30,23 +31,14 @@ function formatFullAddress(address?: string, number?: string, neighborhood?: str
   return parts.join(' - ');
 }
 
-function buildGoogleMapsUrl(result: SearchResult): string {
-  const destination = formatFullAddress(
+function getFullDestination(result: SearchResult): string {
+  return formatFullAddress(
     result.address,
     result.number,
     result.neighborhood,
     result.city,
     result.state
   );
-  
-  const origin = result.originAddress || '';
-  
-  // Universal Google Maps URL format - opens app on mobile devices
-  const baseUrl = 'https://www.google.com/maps/dir/';
-  const encodedOrigin = encodeURIComponent(origin);
-  const encodedDestination = encodeURIComponent(destination + ', Brasil');
-  
-  return `${baseUrl}?api=1&origin=${encodedOrigin}&destination=${encodedDestination}`;
 }
 
 const INITIAL_VISIBLE_COUNT = 3;
@@ -59,11 +51,7 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
   const fullAddress = formatFullAddress(result.address, result.number, result.neighborhood, result.city, result.state);
   const hasAddressDetails = result.address || result.neighborhood || result.city;
   const isOnlyExams = result.services?.toLowerCase() === 'somente exames complementares';
-  const handleOpenGoogleMaps = () => {
-    const url = buildGoogleMapsUrl(result);
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
+  const destination = getFullDestination(result);
   return (
     <div
       className={cn(
@@ -142,15 +130,7 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
             <span className="font-medium">Endereço: </span>
             {fullAddress}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleOpenGoogleMaps}
-            className="w-full sm:w-auto"
-          >
-            <Navigation className="h-4 w-4 mr-2" />
-            Como chegar
-          </Button>
+          <NavigationMenu destination={destination} origin={result.originAddress} />
         </div>
       )}
     </div>
