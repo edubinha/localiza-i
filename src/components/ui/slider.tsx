@@ -20,8 +20,6 @@ const Slider = React.forwardRef<
     <SliderPrimitive.Root
       ref={ref}
       className={cn("relative flex w-full touch-none select-none items-center", className)}
-      onPointerDown={() => setIsDragging(true)}
-      onPointerUp={() => setIsDragging(false)}
       {...props}
     >
       <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-slate-200">
@@ -30,12 +28,14 @@ const Slider = React.forwardRef<
       <SliderPrimitive.Thumb 
         className={cn(
           "relative block h-5 w-5 rounded-full border-2 border-navy bg-white shadow-md",
-          "transition-all duration-150 ease-out",
-          "hover:scale-110 hover:shadow-lg hover:shadow-navy/20",
+          "transition-all duration-200 ease-out",
+          "hover:scale-125 hover:shadow-lg hover:shadow-navy/30",
           "focus-visible:outline-none",
           "disabled:pointer-events-none disabled:opacity-50",
-          "cursor-grab active:cursor-grabbing active:scale-105"
+          "cursor-grab active:cursor-grabbing active:scale-110"
         )}
+        onPointerDown={() => setIsDragging(true)}
+        onPointerUp={() => setIsDragging(false)}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
