@@ -183,7 +183,7 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
                 Nenhuma clínica encontrada
               </h3>
               <p className="text-muted-foreground text-sm">
-                Não foi localizada nenhuma clínica dentro do raio de 40km.
+                Experimente aumentar o raio de busca para ver opções próximas.
               </p>
             </div>
           </div>

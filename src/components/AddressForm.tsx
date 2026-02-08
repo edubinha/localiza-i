@@ -374,7 +374,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
 
       // Map to SearchResult format and filter by search radius
       // If radius is 100km (max), show all results without filtering
-      const isUnlimited = searchRadius >= 100;
+      const isUnlimited = searchRadius >= 50;
       const sortedLocations = routeResults
         .map((route: RouteResult) => ({
           name: route.name,
@@ -618,7 +618,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                 <span className="text-sm font-medium text-foreground">
                   Distância máxima:{' '}
                   <span className="text-navy font-semibold">
-                    {searchRadius >= 100 ? '> 100 km' : `${searchRadius} km`}
+                    {searchRadius >= 50 ? '> 50 km' : `${searchRadius} km`}
                   </span>
                 </span>
               </div>
@@ -626,14 +626,14 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                 value={[searchRadius]}
                 onValueChange={(values) => setSearchRadius(values[0])}
                 min={5}
-                max={100}
+                max={50}
                 step={1}
                 disabled={isDisabled}
                 className="w-full"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>5 km</span>
-                <span>100 km</span>
+                <span>50 km</span>
               </div>
             </div>
 
