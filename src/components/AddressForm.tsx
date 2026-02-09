@@ -4,7 +4,7 @@ import { devLog } from '@/lib/logger';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Search, Loader2, Eraser, MapPin } from 'lucide-react';
+import { Search, Loader2, Eraser } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -462,29 +462,13 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                           inputMode="numeric"
                           pattern="[0-9]{5}-?[0-9]{3}"
                           autoComplete="off"
-                          className={`pr-20 shadow-sm rounded-lg focus:ring-2 focus:ring-primary/20 ${cepError ? 'border-destructive' : ''}`}
+                          className={`shadow-sm rounded-lg focus:ring-2 focus:ring-primary/20 ${cepError ? 'border-destructive' : ''}`}
                         />
-                        <div className="absolute right-2 flex items-center gap-1">
-                          {isFetchingCep && (
-                            <div className="flex items-center justify-center p-1">
-                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={handleGeolocation}
-                            disabled={isDisabled || isFetchingLocation || isFetchingCep}
-                            className="flex items-center justify-center p-2 min-w-[40px] min-h-[40px] rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Usar minha localização"
-                            aria-label="Usar minha localização"
-                          >
-                            {isFetchingLocation ? (
-                              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                            ) : (
-                              <MapPin className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
-                            )}
-                          </button>
-                        </div>
+                        {isFetchingCep && (
+                          <div className="absolute right-2 flex items-center justify-center p-1">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          </div>
+                        )}
                       </div>
                     </FormControl>
                     {cepError && (

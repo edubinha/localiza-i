@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigation, MapPin, X } from 'lucide-react';
+import { Navigation, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -135,8 +135,7 @@ export function NavigationMenu({ destination, origin }: NavigationMenuProps) {
         </DrawerTrigger>
         <DrawerContent className="backdrop-blur-xl bg-background/95">
           <DrawerHeader className="text-center">
-            <DrawerTitle className="flex items-center justify-center gap-2">
-              <MapPin className="h-5 w-5 text-emerald" />
+            <DrawerTitle>
               Abrir com...
             </DrawerTitle>
           </DrawerHeader>
