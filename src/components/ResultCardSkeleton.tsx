@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export function ResultCardSkeleton() {
   return (
-    <div className="flex flex-col gap-2 p-4 rounded-xl bg-card border border-border/60 shadow-sm animate-pulse">
+    <div className="flex flex-col gap-2 p-4 rounded-xl bg-white shadow-sm border-l-4 border-l-muted animate-pulse">
       <div className="flex items-start gap-3 sm:gap-4">
         {/* Position indicator skeleton */}
         <Skeleton className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full" />
