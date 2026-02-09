@@ -55,27 +55,27 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 p-4 rounded-xl bg-white shadow-sm border-l-4 border-l-emerald",
+        "flex flex-col gap-2 p-4 rounded-xl bg-card border border-border/60 shadow-sm",
         "hover:shadow-md transition-all duration-200 animate-fade-in-up"
       )}
       style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'backwards' }}
     >
       <div className="flex items-start gap-3 sm:gap-4">
-        <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-navy/10 flex items-center justify-center">
-          <span className="font-bold text-navy text-sm sm:text-base">{index + 1}</span>
+        <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-primary/10 flex items-center justify-center">
+          <span className="font-bold text-primary text-sm sm:text-base">{index + 1}</span>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2">
-            <h3 className="font-semibold text-navy text-sm sm:text-base leading-tight">{result.name}</h3>
+            <h3 className="font-sans font-semibold tracking-tight text-foreground text-sm sm:text-base leading-tight">{result.name}</h3>
             {isOnlyExams && (
-              <FlaskConical className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+              <FlaskConical className="h-4 w-4 text-violet flex-shrink-0 mt-0.5" />
             )}
           </div>
           {locationSummary && (
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{locationSummary}</p>
           )}
           <div className="flex items-center justify-between mt-1.5 sm:mt-1">
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1 text-sm">
               <MapPin className="h-4 w-4 text-emerald" />
               <span className="font-medium text-emerald">{result.formattedDistance}</span>
             </div>
@@ -85,7 +85,7 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowFullAddress(!showFullAddress)}
-                className="sm:hidden h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                className="sm:hidden h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-accent/50"
               >
                 {showFullAddress ? (
                   <>
@@ -108,7 +108,7 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
             variant="ghost"
             size="sm"
             onClick={() => setShowFullAddress(!showFullAddress)}
-            className="hidden sm:flex flex-shrink-0 text-muted-foreground hover:text-foreground"
+            className="hidden sm:flex flex-shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent/50"
           >
             {showFullAddress ? (
               <>
@@ -125,10 +125,10 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
         )}
       </div>
       {showFullAddress && fullAddress && (
-        <div className="ml-11 sm:ml-14 p-3 rounded-md bg-background border text-xs sm:text-sm space-y-3">
+        <div className="ml-11 sm:ml-14 p-3 rounded-md bg-background border border-border/60 text-xs sm:text-sm space-y-3">
           <div>
-            <span className="font-medium">Endereço: </span>
-            {fullAddress}
+            <span className="font-medium text-foreground">Endereço: </span>
+            <span className="text-muted-foreground">{fullAddress}</span>
           </div>
           <NavigationMenu destination={destination} origin={result.originAddress} />
         </div>
@@ -226,15 +226,15 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
       </CardHeader>
       <CardContent className="space-y-3">
         {searchInfo && (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber/10 border border-amber/30 text-amber text-sm">
             <Info className="h-4 w-4 flex-shrink-0" />
             <span>Busca realizada utilizando: <strong>{searchInfo}</strong></span>
           </div>
         )}
         {hasOnlyExams && (
-          <Alert className="bg-blue-50 border-blue-200">
-            <FlaskConical className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800 text-sm">
+          <Alert className="bg-violet/10 border-violet/30">
+            <FlaskConical className="h-4 w-4 text-violet" />
+            <AlertDescription className="text-violet text-sm">
               Este local realiza apenas exames laboratoriais e/ou de imagem.
             </AlertDescription>
           </Alert>

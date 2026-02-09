@@ -128,7 +128,7 @@ export function NavigationMenu({ destination, origin }: NavigationMenuProps) {
     return (
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerTrigger asChild>
-          <Button variant="outline" size="sm" className="w-full sm:w-auto">
+          <Button size="sm" className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 shadow-sm">
             <Navigation className="h-4 w-4 mr-2" />
             Como chegar
           </Button>
@@ -160,7 +160,7 @@ export function NavigationMenu({ destination, origin }: NavigationMenuProps) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full sm:w-auto">
+        <Button size="sm" className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 shadow-sm">
           <Navigation className="h-4 w-4 mr-2" />
           Como chegar
         </Button>

@@ -60,6 +60,8 @@ export default {
         // Brand colors
         navy: "hsl(var(--navy))",
         emerald: "hsl(var(--emerald))",
+        violet: "hsl(var(--violet))",
+        amber: "hsl(var(--amber))",
       },
       borderRadius: {
         lg: "var(--radius)",
