@@ -80,17 +80,15 @@ const SelectContent = React.forwardRef<
       position={position}
       {...props}
     >
-      <SelectScrollUpButton />
       <SelectPrimitive.Viewport
         className={cn(
-          "p-1 overflow-y-scroll pr-2 scrollbar-visible",
+          "p-1 scrollbar-visible",
           position === "popper" &&
             "w-full min-w-[var(--radix-select-trigger-width)]",
         )}
       >
         {children}
       </SelectPrimitive.Viewport>
-      <SelectScrollDownButton />
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ));
