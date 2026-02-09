@@ -474,7 +474,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                             type="button"
                             onClick={handleGeolocation}
                             disabled={isDisabled || isFetchingLocation || isFetchingCep}
-                            className="flex items-center justify-center p-2 min-w-[40px] min-h-[40px] rounded-md transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center justify-center p-2 min-w-[40px] min-h-[40px] rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Usar minha localização"
                             aria-label="Usar minha localização"
                           >
