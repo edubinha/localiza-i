@@ -116,6 +116,7 @@ const Index = () => {
     setIsSearching(true);
     setSearchError(null);
     setResults([]);
+    setHasSearched(false);
   };
   const handleResults = (newResults: SearchResult[]) => {
     setResults(newResults);

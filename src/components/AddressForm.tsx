@@ -393,6 +393,13 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
         }))
         .filter((location) => location.distance <= searchRadius);
 
+      if (sortedLocations.length === 0) {
+        toast({
+          title: 'Nenhuma clínica encontrada',
+          description: `Nenhum prestador foi encontrado no raio de ${searchRadius} km. Tente aumentar o raio de busca.`,
+        });
+      }
+
       onResults(sortedLocations);
     } catch (error) {
       devLog.error('Search error:', error);
