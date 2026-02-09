@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -122,6 +123,7 @@ export function CityAutocomplete({
   }, []);
 
   const showSuggestions = isOpen && suggestions.length > 0;
+  const showLoadingSkeletons = isOpen && isLoading && inputValue.length >= 2;
 
   return (
     <div ref={containerRef} className="relative">
@@ -130,7 +132,7 @@ export function CityAutocomplete({
         value={inputValue}
         onChange={handleInputChange}
         onFocus={() => {
-          if (suggestions.length > 0) setIsOpen(true);
+          if (suggestions.length > 0 || isLoading) setIsOpen(true);
         }}
         placeholder={stateCode ? placeholder : "Selecione o estado primeiro"}
         disabled={disabled || !stateCode}
@@ -142,7 +144,16 @@ export function CityAutocomplete({
           <div className="h-4 w-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
         </div>
       )}
-      {showSuggestions && (
+      {showLoadingSkeletons && (
+        <ul className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg p-1">
+          {[1, 2, 3].map((i) => (
+            <li key={i} className="px-3 py-1.5">
+              <Skeleton className="h-4 w-full rounded-md" />
+            </li>
+          ))}
+        </ul>
+      )}
+      {showSuggestions && !isLoading && (
         <ul className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto scrollbar-hidden p-1">
           {suggestions.map((city) => (
             <li
