@@ -597,7 +597,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                           <SelectValue placeholder="Selecione o estado" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="max-h-48 overflow-y-auto">
+                      <SelectContent>
                         {brazilianStates.map((state) => (
                           <SelectItem key={state.value} value={state.value}>
                             {state.label}
