@@ -611,7 +611,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
             {/* Search Radius Slider */}
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">
+              <span className="text-sm font-medium text-heading">
                   Raio de busca:{' '}
                   <span className="text-navy font-semibold">
                     {searchRadius} km

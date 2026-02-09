@@ -179,7 +179,7 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
               <MapPinned className="h-8 w-8 text-muted-foreground/50" />
             </div>
             <div>
-              <h3 className="text-lg font-medium text-foreground mb-1">
+              <h3 className="text-lg font-medium text-heading mb-1">
                 Nenhuma clínica encontrada
               </h3>
               <p className="text-muted-foreground text-sm">
