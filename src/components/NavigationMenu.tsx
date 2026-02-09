@@ -92,17 +92,17 @@ export function NavigationMenu({ destination, origin }: NavigationMenuProps) {
   const options: NavigationOption[] = [
     {
       name: 'Google Maps',
-      icon: <GoogleMapsIcon className="h-6 w-6" />,
+      icon: <GoogleMapsIcon className="h-5 w-5" />,
       url: buildGoogleMapsUrl(destination, origin),
     },
     {
       name: 'Waze',
-      icon: <WazeIcon className="h-6 w-6" />,
+      icon: <WazeIcon className="h-5 w-5" />,
       url: buildWazeUrl(destination),
     },
     ...(showAppleMaps ? [{
       name: 'Apple Maps',
-      icon: <AppleMapsIcon className="h-6 w-6" />,
+      icon: <AppleMapsIcon className="h-5 w-5" />,
       url: buildAppleMapsUrl(destination),
     }] : []),
   ];
@@ -115,12 +115,12 @@ export function NavigationMenu({ destination, origin }: NavigationMenuProps) {
   const OptionButton = ({ option }: { option: NavigationOption }) => (
     <button
       onClick={() => handleOptionClick(option.url)}
-      className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-accent rounded-lg transition-all group"
+      className="flex items-center gap-2 w-full px-4 py-2 text-left hover:bg-accent rounded-lg transition-all group"
     >
       <span className="transition-transform group-hover:scale-105">
         {option.icon}
       </span>
-      <span className="font-medium">{option.name}</span>
+      <span className="font-medium text-sm">{option.name}</span>
     </button>
   );
 
@@ -166,7 +166,7 @@ export function NavigationMenu({ destination, origin }: NavigationMenuProps) {
           Como chegar
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-1" align="start">
+      <PopoverContent className="w-40 p-1" align="start">
         <div className="space-y-1">
           {options.filter(o => o.name !== 'Apple Maps').map((option) => (
             <OptionButton key={option.name} option={option} />
