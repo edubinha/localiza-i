@@ -143,7 +143,7 @@ export function CityAutocomplete({
         </div>
       )}
       {showSuggestions && (
-        <ul className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+        <ul className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto scrollbar-hidden">
           {suggestions.map((city, index) => (
             <li
               key={city}

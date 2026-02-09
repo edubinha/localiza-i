@@ -161,5 +161,18 @@
   .scrollbar-visible::-webkit-scrollbar-button:single-button:vertical:increment:hover {
     background-color: hsl(var(--muted-foreground) / 0.2);
   }
+
+  /* Hide native scrollbar but keep scrolling */
+  .scrollbar-hidden {
+    overflow-y: auto;
+    -ms-overflow-style: none; /* IE/Edge legacy */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
 }
 
