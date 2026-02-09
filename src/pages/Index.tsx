@@ -143,7 +143,7 @@ const Index = () => {
         <div className="max-w-2xl mx-auto space-y-6">
           {/* Introduction */}
           <div className="text-center mb-8">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground mb-2">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-heading mb-2">
               Onde encontrar ficou fácil.
             </h2>
             <p className="text-muted-foreground">

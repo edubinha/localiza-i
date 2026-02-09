@@ -60,6 +60,9 @@ export default {
         // Brand colors
         navy: "hsl(var(--navy))",
         emerald: "hsl(var(--emerald))",
+        // Typography semantic colors
+        heading: "hsl(var(--heading))",
+        body: "hsl(var(--body))",
       },
       borderRadius: {
         lg: "var(--radius)",

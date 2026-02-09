@@ -34,7 +34,7 @@ export function Header() {
                 {empresa && (
                   <>
                     <span className="text-muted-foreground">|</span>
-                    <span className="text-lg font-medium text-foreground">{empresa.nome}</span>
+                    <span className="text-lg font-medium text-heading">{empresa.nome}</span>
                   </>
                 )}
               </>
