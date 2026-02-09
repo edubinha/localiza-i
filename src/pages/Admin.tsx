@@ -262,7 +262,7 @@ export default function Admin() {
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Voltar
                 </Button>
-                <Button type="submit" className="flex-1" disabled={isValidating}>
+                <Button type="submit" className="flex-1 bg-navy hover:bg-navy/90 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]" disabled={isValidating}>
                   {isValidating ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -366,7 +366,7 @@ export default function Admin() {
                   type="button"
                   onClick={handleSave}
                   disabled={isSaving || !googleSheetsUrl.trim()}
-                  className="flex-1"
+                  className="flex-1 bg-navy hover:bg-navy/90 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {isSaving ? (
                     <>
