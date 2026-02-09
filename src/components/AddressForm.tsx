@@ -8,6 +8,7 @@ import { Search, Loader2, Eraser } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
 import {
   Form,
@@ -507,12 +508,16 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                   <FormItem className="md:col-span-2">
                     <FormLabel>Endereço (Rua/Avenida)</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="Ex: Rua das Flores" 
-                        {...field} 
-                        disabled={isDisabled}
-                        autoComplete="off"
-                      />
+                      {isFetchingCep ? (
+                        <Skeleton className="h-10 w-full rounded-md" />
+                      ) : (
+                        <Input 
+                          placeholder="Ex: Rua das Flores" 
+                          {...field} 
+                          disabled={isDisabled}
+                          autoComplete="off"
+                        />
+                      )}
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -527,12 +532,16 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                   <FormItem>
                     <FormLabel>Bairro</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="Ex: Centro" 
-                        {...field} 
-                        disabled={isDisabled}
-                        autoComplete="off"
-                      />
+                      {isFetchingCep ? (
+                        <Skeleton className="h-10 w-full rounded-md" />
+                      ) : (
+                        <Input 
+                          placeholder="Ex: Centro" 
+                          {...field} 
+                          disabled={isDisabled}
+                          autoComplete="off"
+                        />
+                      )}
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -547,13 +556,17 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                   <FormItem>
                     <FormLabel>Cidade</FormLabel>
                     <FormControl>
-                      <CityAutocomplete
-                        value={field.value}
-                        onChange={field.onChange}
-                        stateCode={selectedState}
-                        disabled={isDisabled}
-                        placeholder="Ex: São Paulo"
-                      />
+                      {isFetchingCep ? (
+                        <Skeleton className="h-10 w-full rounded-md" />
+                      ) : (
+                        <CityAutocomplete
+                          value={field.value}
+                          onChange={field.onChange}
+                          stateCode={selectedState}
+                          disabled={isDisabled}
+                          placeholder="Ex: São Paulo"
+                        />
+                      )}
                     </FormControl>
                     <FormMessage />
                   </FormItem>
