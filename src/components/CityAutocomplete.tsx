@@ -143,17 +143,12 @@ export function CityAutocomplete({
         </div>
       )}
       {showSuggestions && (
-        <ul className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto scrollbar-hidden">
-          {suggestions.map((city, index) => (
+        <ul className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto scrollbar-hidden p-1">
+          {suggestions.map((city) => (
             <li
               key={city}
               onClick={() => handleSelectCity(city)}
-              className={cn(
-                "px-3 py-2 cursor-pointer text-sm transition-colors",
-                "hover:bg-accent hover:text-accent-foreground",
-                index === 0 && "rounded-t-md",
-                index === suggestions.length - 1 && "rounded-b-md"
-              )}
+              className="px-3 py-1.5 cursor-pointer text-sm rounded-sm transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               {city}
             </li>
