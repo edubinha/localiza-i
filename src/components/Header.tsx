@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEmpresa } from '@/hooks/useEmpresa';
-import logo from '@/assets/logo.svg';
+import logo from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Settings, LogOut } from 'lucide-react';
@@ -31,7 +31,7 @@ export function Header() {
               </>
             ) : (
               <>
-                <img alt="LocalizAI" className="h-8" src={logo} />
+                <img alt="LocalizAI" className="h-8 w-auto" src={logo} />
                 {empresa && (
                   <>
                     <span className="text-muted-foreground">|</span>
