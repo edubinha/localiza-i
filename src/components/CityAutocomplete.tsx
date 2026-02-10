@@ -3,6 +3,8 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
+import { devLog } from '@/lib/logger';
+import { buildIbgeMunicipiosUrl } from '@/lib/urlValidation';
 
 interface City {
   nome: string;
@@ -47,14 +49,12 @@ export function CityAutocomplete({
     const fetchCities = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(
-          `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${stateCode}/municipios?orderBy=nome`
-        );
+        const response = await fetch(buildIbgeMunicipiosUrl(stateCode));
         const data: City[] = await response.json();
         const cityNames = data.map((city) => city.nome);
         setAllCities(cityNames);
       } catch (error) {
-        console.error('Error fetching cities:', error);
+        devLog.error('Error fetching cities:', error);
         setAllCities([]);
       } finally {
         setIsLoading(false);

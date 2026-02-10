@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
+import { devLog } from '@/lib/logger';
 
 export interface Empresa {
   id: string;
@@ -40,7 +41,7 @@ export function EmpresaProvider({ children }: { children: React.ReactNode }) {
         setIsAdminValidated(true);
       }
     } catch (error) {
-      console.error('Error loading empresa from session:', error);
+      devLog.error('Error loading empresa from session:', error);
     } finally {
       setIsLoading(false);
     }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { devLog } from '@/lib/logger';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -50,7 +51,7 @@ export default function Login() {
       });
       navigate('/');
     } catch (err) {
-      console.error('Login error:', err);
+      devLog.error('Login error:', err);
       setError('Ocorreu um erro ao validar a chave. Tente novamente.');
     } finally {
       setIsLoading(false);

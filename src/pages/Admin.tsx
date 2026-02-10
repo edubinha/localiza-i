@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save, Loader2, AlertCircle, CheckCircle2, Settings, Link2, Eye, EyeOff } from 'lucide-react';
 import { isValidGoogleSheetsUrl, fetchGoogleSheetsCsv, validateRequiredColumns } from '@/lib/googleSheets';
 import { parseCSV } from '@/lib/csv';
+import { devLog } from '@/lib/logger';
 
 export default function Admin() {
   const { empresa, isAdminValidated, setAdminValidated, setEmpresa } = useEmpresa();
@@ -71,7 +72,7 @@ export default function Admin() {
       setValidatedAdminSecret(adminSecret.trim()); // Store in memory only
       setAdminSecret(''); // Clear the input field
     } catch (err) {
-      console.error('Admin validation error:', err);
+      devLog.error('Admin validation error:', err);
       setValidationError('Erro ao validar código. Tente novamente.');
     } finally {
       setIsValidating(false);
@@ -188,7 +189,7 @@ export default function Admin() {
         description: 'Configurações salvas com sucesso!',
       });
     } catch (error) {
-      console.error('Save error:', error);
+      devLog.error('Save error:', error);
       toast({
         title: 'Erro',
         description: 'Não foi possível salvar as configurações.',
