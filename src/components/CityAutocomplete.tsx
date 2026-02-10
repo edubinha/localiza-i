@@ -136,7 +136,7 @@ export function CityAutocomplete({
         }}
         placeholder={stateCode ? placeholder : "Selecione o estado primeiro"}
         disabled={disabled || !stateCode}
-        className={cn("cursor-text text-sm", className)}
+        className={cn("cursor-text text-sm h-10", className)}
         autoComplete="off"
       />
       {isLoading && stateCode && (

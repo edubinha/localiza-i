@@ -626,7 +626,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                         disabled={isDisabled}
                       >
                         <FormControl>
-                          <SelectTrigger className="cursor-pointer text-sm">
+                          <SelectTrigger className="cursor-pointer text-sm h-10">
                             <SelectValue placeholder="Selecione o estado" />
                           </SelectTrigger>
                         </FormControl>

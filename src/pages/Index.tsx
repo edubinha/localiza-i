@@ -215,15 +215,17 @@ const Index = () => {
               {isLoadingSheet ? <div className="flex items-center justify-center gap-3 text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin" />
                   <span>Carregando prestadores...</span>
-                </div> : sheetError ? <div className="flex flex-col items-center gap-3">
-                  <div className="flex items-center gap-2 text-destructive">
-                    <AlertCircle className="h-5 w-5" />
+              </div> : sheetError ? <div className="space-y-3">
+                  <div className="w-full flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
                     <span>{sheetError}</span>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => loadSheetData()}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Tentar novamente
-                  </Button>
+                  <div className="flex justify-center">
+                    <Button variant="outline" size="sm" onClick={() => loadSheetData()}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Tentar novamente
+                    </Button>
+                  </div>
                 </div> : <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <FileSpreadsheet className="h-5 w-5 text-emerald" />
