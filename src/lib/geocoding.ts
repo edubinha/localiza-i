@@ -187,71 +187,27 @@ export async function geocodeAddress(
   let result: { lat: number; lon: number } | null = null;
   let searchUsed = '';
 
-  // Strategy 1 & 2: Run Nominatim in parallel when we have street and number
-  if (street && number) {
-    const streetWithNumber = `${number} ${street}`;
-    
-    const [fullAddressResult, streetOnlyResult] = await Promise.all([
-      tryStructuredGeocode({
-        street: streetWithNumber,
-        city,
-        state,
-        country: 'Brasil',
-      }),
-      tryStructuredGeocode({
-        street,
-        city,
-        state,
-        country: 'Brasil',
-      }),
-    ]);
-
-    if (fullAddressResult) {
-      result = fullAddressResult;
-      searchUsed = 'endereço completo';
-    } else if (streetOnlyResult) {
-      result = streetOnlyResult;
-      searchUsed = 'endereço sem número';
-    }
-  } else if (street) {
+  // Strategy 1: Structured geocode with street (sequential to respect Nominatim rate-limit)
+  if (street) {
+    const streetQuery = number ? `${number} ${street}` : street;
     result = await tryStructuredGeocode({
-      street,
+      street: streetQuery,
       city,
       state,
       country: 'Brasil',
     });
     if (result) {
-      searchUsed = 'endereço sem número';
+      searchUsed = number ? 'endereço completo' : 'endereço sem número';
     }
   }
 
-  // Strategy 3: Free-text search for neighborhood
-  if (!result && neighborhood) {
-    const neighborhoodQuery = `${neighborhood}, ${city}, ${state}, Brasil`;
-    result = await tryFreeTextGeocode(neighborhoodQuery, city, state);
-    if (result) {
-      searchUsed = 'bairro';
-    }
-  }
-
-  // Strategy 4: Structured search with city + state only
+  // Strategy 2 (fallback): Free-text with full address
   if (!result) {
-    result = await tryStructuredGeocode({
-      city,
-      state,
-      country: 'Brasil',
-    });
-    if (result) {
-      searchUsed = 'cidade e estado';
-    }
-  }
-
-  // Strategy 5: Free-text fallback as last resort
-  if (!result) {
-    const freeTextQuery = `${neighborhood}, ${city}, ${state}, Brasil`;
+    const parts = [street, number, neighborhood, city, state, 'Brasil'].filter(Boolean);
+    const freeTextQuery = parts.join(', ');
     result = await tryFreeTextGeocode(freeTextQuery, city, state);
     if (result) {
-      searchUsed = 'busca textual (fallback)';
+      searchUsed = 'busca textual';
     }
   }
 
