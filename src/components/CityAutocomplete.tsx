@@ -159,7 +159,7 @@ export function CityAutocomplete({
             <li
               key={city}
               onClick={() => handleSelectCity(city)}
-              className="px-3 py-1.5 cursor-pointer text-sm rounded-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="px-3 py-1.5 cursor-default text-sm rounded-sm transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               {city}
             </li>
