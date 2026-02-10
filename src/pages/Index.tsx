@@ -10,6 +10,34 @@ import { Loader2, AlertCircle, FileSpreadsheet, RefreshCw, Clock } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
+const CACHE_KEY = 'localizai_sheet_cache';
+
+interface SheetCache {
+  data: any[];
+  sheetName: string | null;
+  timestamp: number;
+  url: string;
+}
+
+function loadFromLocalStorage(url: string): SheetCache | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const cached: SheetCache = JSON.parse(raw);
+    if (cached.url !== url) return null;
+    return cached;
+  } catch {
+    return null;
+  }
+}
+
+function saveToLocalStorage(data: any[], sheetName: string | null, url: string) {
+  try {
+    const cache: SheetCache = { data, sheetName, timestamp: Date.now(), url };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch { /* quota exceeded — ignore */ }
+}
+
 const formatRelativeTime = (date: Date): string => {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -48,23 +76,45 @@ const Index = () => {
   const [sheetName, setSheetName] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const hasLoadedRef = useRef(false);
-  // Load sheet data - only once on mount or when URL changes
+
+  // Load sheet data with stale-while-revalidate via localStorage
   const loadSheetData = useCallback(async (forceRefresh = false) => {
     if (!empresa?.google_sheets_url) {
       setSheetError('Nenhuma planilha configurada. Acesse as configurações para vincular uma planilha.');
       return;
     }
 
-    // Skip if already loaded and not forcing refresh
-    if (hasLoadedRef.current && !forceRefresh && locations.length > 0) {
-      return;
+    const sheetUrl = empresa.google_sheets_url;
+
+    // On first load, try localStorage cache for instant display
+    if (!hasLoadedRef.current && !forceRefresh) {
+      const cached = loadFromLocalStorage(sheetUrl);
+      if (cached) {
+        setLocations(cached.data);
+        setSheetName(cached.sheetName);
+        setLastSyncTime(new Date(cached.timestamp));
+        hasLoadedRef.current = true;
+        // Continue to background revalidation below (no return)
+      }
     }
 
-    setIsLoadingSheet(true);
+    // Skip network fetch if already loaded and not forcing refresh (and no stale-while-revalidate needed)
+    if (hasLoadedRef.current && !forceRefresh && locations.length > 0) {
+      // If we just restored from cache, do a background revalidation
+      // Otherwise skip entirely
+      const cached = loadFromLocalStorage(sheetUrl);
+      const isStaleRevalidation = cached && !forceRefresh;
+      if (!isStaleRevalidation) return;
+    }
+
+    // Show loading spinner only if we have no data yet
+    if (!hasLoadedRef.current) {
+      setIsLoadingSheet(true);
+    }
     setSheetError(null);
 
     try {
-      const csvUrl = extractGoogleSheetsCsvUrl(empresa.google_sheets_url);
+      const csvUrl = extractGoogleSheetsCsvUrl(sheetUrl);
       if (!csvUrl) {
         throw new Error('URL da planilha inválida.');
       }
@@ -76,35 +126,42 @@ const Index = () => {
 
       const csvText = await response.text();
 
-      // Check if it's HTML (not published as CSV)
       if (csvText.includes('<!DOCTYPE html>') || csvText.includes('<html')) {
         throw new Error('A planilha não está publicada como CSV. Peça ao administrador para publicá-la corretamente.');
       }
 
-      // Parse with name row (first row contains sheet name)
       const result = parseSpreadsheetText(csvText, true);
       if (!result.success) {
         throw new Error(result.error || 'Erro ao processar a planilha.');
       }
 
-      // Store in cache - data is now available for instant filtering
-      setLocations(result.data);
+      // Compare with current data — only update state if data changed
+      const newDataJson = JSON.stringify(result.data);
+      const currentDataJson = JSON.stringify(locations);
+
+      if (newDataJson !== currentDataJson || !hasLoadedRef.current) {
+        setLocations(result.data);
+        setResults([]);
+        setHasSearched(false);
+      }
+
       setSheetName(result.sheetName || null);
       setLastSyncTime(new Date());
       hasLoadedRef.current = true;
-      
-      // Clear previous search results on data refresh
-      setResults([]);
-      setHasSearched(false);
+
+      // Persist to localStorage
+      saveToLocalStorage(result.data, result.sheetName || null, sheetUrl);
     } catch (error) {
       console.error('Error loading sheet:', error);
-      setSheetError(error instanceof Error ? error.message : 'Erro ao carregar planilha.');
-      setLocations([]);
-      hasLoadedRef.current = false;
+      // Only show error if we have no cached data
+      if (!hasLoadedRef.current) {
+        setSheetError(error instanceof Error ? error.message : 'Erro ao carregar planilha.');
+        setLocations([]);
+      }
     } finally {
       setIsLoadingSheet(false);
     }
-  }, [empresa?.google_sheets_url, locations.length, setLocations]);
+  }, [empresa?.google_sheets_url, locations, setLocations]);
 
   // Load sheet data only once on mount
   useEffect(() => {
