@@ -613,28 +613,32 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Estado</FormLabel>
-                    <Select 
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        // Clear city when state changes
-                        form.setValue('city', '');
-                      }} 
-                      value={field.value}
-                      disabled={isDisabled}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="cursor-pointer text-sm">
-                          <SelectValue placeholder="Selecione o estado" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {brazilianStates.map((state) => (
-                          <SelectItem key={state.value} value={state.value}>
-                            {state.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {isFetchingCep ? (
+                      <Skeleton className="h-10 w-full rounded-md" />
+                    ) : (
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          // Clear city when state changes
+                          form.setValue('city', '');
+                        }} 
+                        value={field.value}
+                        disabled={isDisabled}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="cursor-pointer text-sm">
+                            <SelectValue placeholder="Selecione o estado" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {brazilianStates.map((state) => (
+                            <SelectItem key={state.value} value={state.value}>
+                              {state.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
