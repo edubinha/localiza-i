@@ -14,6 +14,31 @@ const devLog = {
   },
 };
 
+/**
+ * Database-based rate limiter.
+ */
+// deno-lint-ignore no-explicit-any
+async function checkRateLimit(supabase: any, identifier: string, endpoint: string, maxAttempts: number, windowSeconds: number): Promise<{ allowed: boolean; retryAfterSeconds?: number }> {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - windowSeconds * 1000);
+  const { data: existing } = await supabase.from('rate_limits').select('attempt_count, window_start').eq('identifier', identifier).eq('endpoint', endpoint).single();
+  if (!existing) {
+    await supabase.from('rate_limits').upsert({ identifier, endpoint, attempt_count: 1, window_start: now.toISOString() });
+    return { allowed: true };
+  }
+  const entryWindowStart = new Date(existing.window_start);
+  if (entryWindowStart < windowStart) {
+    await supabase.from('rate_limits').upsert({ identifier, endpoint, attempt_count: 1, window_start: now.toISOString() });
+    return { allowed: true };
+  }
+  if (existing.attempt_count >= maxAttempts) {
+    const retryAfterSeconds = Math.ceil((entryWindowStart.getTime() + windowSeconds * 1000 - now.getTime()) / 1000);
+    return { allowed: false, retryAfterSeconds: Math.max(retryAfterSeconds, 1) };
+  }
+  await supabase.from('rate_limits').update({ attempt_count: existing.attempt_count + 1 }).eq('identifier', identifier).eq('endpoint', endpoint);
+  return { allowed: true };
+}
+
 // CORS configuration - allowlist for production and preview domains
 const ALLOWED_ORIGINS = [
   'https://localiza-i.lovable.app',
@@ -510,6 +535,18 @@ serve(async (req) => {
         {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Rate limit: 20 requests per empresa_id per 60 seconds
+    const rl = await checkRateLimit(supabase, validation.data.empresaId, 'calculate-routes', 20, 60);
+    if (!rl.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Muitas requisições. Aguarde e tente novamente." }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(rl.retryAfterSeconds) },
         }
       );
     }

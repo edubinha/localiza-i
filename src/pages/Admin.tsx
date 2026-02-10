@@ -63,7 +63,15 @@ export default function Admin() {
         },
       });
 
-      if (fnError || !responseData?.success) {
+      if (fnError) {
+        if (fnError.message?.includes('429') || responseData?.error?.includes('Muitas tentativas')) {
+          setValidationError('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+        } else {
+          setValidationError('Código administrativo inválido.');
+        }
+        return;
+      }
+      if (!responseData?.success) {
         setValidationError('Código administrativo inválido.');
         return;
       }
