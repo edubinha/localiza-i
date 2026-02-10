@@ -218,7 +218,7 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Navigation className="h-5 w-5 text-emerald" />
-          <span className="font-bold">Clínicas mais próximas</span>
+          Clínicas mais próximas
           <span className="text-sm font-normal text-muted-foreground">
             ({results.length} {results.length === 1 ? 'resultado' : 'resultados'})
           </span>
@@ -245,7 +245,7 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
         {hasMoreResults && (
           <Button
             variant="outline"
-            className="w-full h-11 rounded-lg mt-2"
+            className="w-full mt-2"
             onClick={handleShowMore}
           >
             <ChevronDown className="h-4 w-4 mr-2" />

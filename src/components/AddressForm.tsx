@@ -447,7 +447,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
   return (
     <Card className="rounded-xl">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-lg font-bold">Preencha o endereço</CardTitle>
+        <CardTitle className="text-lg">Preencha o endereço</CardTitle>
         <Button 
           type="button" 
           variant="ghost"
@@ -664,7 +664,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
 
             <Button 
               type="submit" 
-              className="w-full h-11 rounded-lg bg-navy hover:bg-navy/90 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]" 
+              className="w-full bg-navy hover:bg-navy/90 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]" 
               disabled={isDisabled || isSearching}
             >
               {isSearching ? (
@@ -681,7 +681,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
             </Button>
 
             {isDisabled && (
-              <p className="text-xs text-muted-foreground text-center">
+              <p className="text-sm text-muted-foreground text-center">
                 Importe uma planilha para habilitar a busca
               </p>
             )}
