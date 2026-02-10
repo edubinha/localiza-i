@@ -12,6 +12,8 @@ export interface RouteResult {
   durationMinutes: number;
   formattedDistance: string;
   formattedDuration: string;
+  latitude?: number;
+  longitude?: number;
   address?: string;
   number?: string;
   neighborhood?: string;
@@ -79,6 +81,8 @@ export async function calculateRoutes(
       name: string; 
       distanceKm: number; 
       durationMinutes: number;
+      latitude?: number;
+      longitude?: number;
       address?: string;
       number?: string;
       neighborhood?: string;
