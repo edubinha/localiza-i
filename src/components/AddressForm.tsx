@@ -110,34 +110,56 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
     setCepError(null);
 
     try {
-      // Direct API call for instant response
-      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-      
-      if (!response.ok) {
-        setCepError('Erro ao buscar CEP. Preencha o endereço manualmente.');
-        return;
+      let cepData: { logradouro: string; bairro: string; uf: string; localidade: string } | null = null;
+
+      // Try ViaCEP with 3s timeout
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000);
+        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`, { signal: controller.signal });
+        clearTimeout(timeout);
+
+        if (response.ok) {
+          const data = await response.json();
+          if (!data.erro) {
+            cepData = { logradouro: data.logradouro || '', bairro: data.bairro || '', uf: data.uf || '', localidade: data.localidade || '' };
+          }
+        }
+      } catch (e) {
+        devLog.log('ViaCEP failed, trying BrasilAPI fallback');
       }
 
-      const data = await response.json();
+      // Fallback: BrasilAPI
+      if (!cepData) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 3000);
+          const response = await fetch(`https://brasilapi.com.br/api/cep/v1/${cleanCep}`, { signal: controller.signal });
+          clearTimeout(timeout);
 
-      if (data.erro) {
+          if (response.ok) {
+            const data = await response.json();
+            cepData = { logradouro: data.street || '', bairro: data.neighborhood || '', uf: data.state || '', localidade: data.city || '' };
+          }
+        } catch (e) {
+          devLog.log('BrasilAPI fallback also failed');
+        }
+      }
+
+      if (!cepData) {
         setCepError('CEP não encontrado. Preencha o endereço manualmente.');
         return;
       }
 
-      // Auto-fill the form fields
-      form.setValue('street', data.logradouro || '');
-      form.setValue('neighborhood', data.bairro || '');
+      form.setValue('street', cepData.logradouro);
+      form.setValue('neighborhood', cepData.bairro);
       
-      // Find the state value that matches the UF
-      const stateMatch = brazilianStates.find(s => s.value === data.uf);
+      const stateMatch = brazilianStates.find(s => s.value === cepData!.uf);
       if (stateMatch) {
         form.setValue('state', stateMatch.value);
       }
       
-      // Set city after state (for autocomplete to work)
-      form.setValue('city', data.localidade || '');
-
+      form.setValue('city', cepData.localidade);
       setCepError(null);
     } catch (error) {
       devLog.error('Error fetching CEP:', error);
