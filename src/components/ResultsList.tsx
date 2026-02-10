@@ -159,7 +159,7 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
 
   if (error) {
     return (
-      <Card ref={ref} className="rounded-xl border-destructive/50">
+      <Card ref={ref} className="rounded-xl border-destructive/50" role="alert">
         <CardHeader>
           <CardTitle className="text-lg text-destructive">Erro na busca</CardTitle>
         </CardHeader>
@@ -173,6 +173,7 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
   if (results.length === 0 && !isLoading && !error) {
     return (
       <Card ref={ref} className="rounded-xl">
+        <span className="sr-only">Nenhum resultado encontrado</span>
         <CardContent className="text-center py-10">
           <div className="flex flex-col items-center gap-4">
             <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center">
@@ -215,6 +216,9 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
 
   return (
     <Card ref={ref} className="rounded-xl">
+      <span className="sr-only">
+        Busca concluída. {results.length} {results.length === 1 ? 'resultado encontrado' : 'resultados encontrados'}.
+      </span>
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Navigation className="h-5 w-5 text-emerald" />
