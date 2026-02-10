@@ -20,11 +20,9 @@ interface NavigationMenuProps {
   longitude?: number;
 }
 
-function buildGoogleMapsUrl(destination: string, origin?: string, lat?: number, lon?: number): string {
+function buildGoogleMapsUrl(destination: string, origin?: string): string {
   const base = 'https://www.google.com/maps/dir/?api=1';
-  const dest = lat !== undefined && lon !== undefined
-    ? `${lat},${lon}`
-    : encodeURIComponent(destination + ', Brasil');
+  const dest = encodeURIComponent(destination + ', Brasil');
   const originParam = origin ? `&origin=${encodeURIComponent(origin)}` : '';
   return `${base}${originParam}&destination=${dest}`;
 }
@@ -99,7 +97,7 @@ export function NavigationMenu({ destination, origin, latitude, longitude }: Nav
     {
       name: 'Google Maps',
       icon: <GoogleMapsIcon className="h-5 w-5" />,
-      url: buildGoogleMapsUrl(destination, origin, latitude, longitude),
+      url: buildGoogleMapsUrl(destination, origin),
     },
     {
       name: 'Waze',
