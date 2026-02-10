@@ -1,6 +1,7 @@
 /**
  * Utilities for Google Sheets integration
  */
+import { isAllowedUrl } from '@/lib/urlValidation';
 
 /**
  * Extracts the CSV export URL from a Google Sheets URL
@@ -56,6 +57,7 @@ export function isValidGoogleSheetsUrl(url: string): boolean {
   
   try {
     const urlObj = new URL(url);
+    if (urlObj.protocol !== 'https:') return false;
     return urlObj.hostname === 'docs.google.com' && url.includes('spreadsheets');
   } catch {
     return false;
@@ -74,6 +76,9 @@ export async function fetchGoogleSheetsCsv(url: string): Promise<string> {
   }
   
   try {
+    if (!isAllowedUrl(csvUrl)) {
+      throw new Error('URL da planilha não é permitida.');
+    }
     const response = await fetch(csvUrl);
     
     if (!response.ok) {

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useEmpresa } from '@/hooks/useEmpresa';
 import { devLog } from '@/lib/logger';
+import { buildViaCepUrl, buildBrasilApiCepUrl, buildNominatimReverseUrl } from '@/lib/urlValidation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -118,7 +119,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 3000);
-        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`, { signal: controller.signal });
+        const response = await fetch(buildViaCepUrl(cleanCep), { signal: controller.signal });
         clearTimeout(timeout);
 
         if (response.ok) {
@@ -136,7 +137,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
         try {
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 3000);
-          const response = await fetch(`https://brasilapi.com.br/api/cep/v1/${cleanCep}`, { signal: controller.signal });
+          const response = await fetch(buildBrasilApiCepUrl(cleanCep), { signal: controller.signal });
           clearTimeout(timeout);
 
           if (response.ok) {
@@ -194,7 +195,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
   const reverseGeocode = useCallback(async (lat: number, lon: number) => {
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`,
+        buildNominatimReverseUrl(lat, lon),
         {
           headers: {
             'User-Agent': 'LocalizAI/1.0',

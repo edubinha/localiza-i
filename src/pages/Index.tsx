@@ -6,6 +6,8 @@ import { useEmpresa } from '@/hooks/useEmpresa';
 import { useLocationsCache } from '@/hooks/useLocationsCache';
 import { parseSpreadsheetText } from '@/lib/spreadsheet';
 import { extractGoogleSheetsCsvUrl } from '@/lib/googleSheets';
+import { isAllowedUrl } from '@/lib/urlValidation';
+import { devLog } from '@/lib/logger';
 import { Loader2, AlertCircle, FileSpreadsheet, RefreshCw, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -119,6 +121,10 @@ const Index = () => {
         throw new Error('URL da planilha inválida.');
       }
 
+      if (!isAllowedUrl(csvUrl)) {
+        throw new Error('URL da planilha não é permitida.');
+      }
+
       const response = await fetch(csvUrl);
       if (!response.ok) {
         throw new Error('Não foi possível acessar a planilha. Verifique se ela está publicada na web.');
@@ -152,7 +158,7 @@ const Index = () => {
       // Persist to localStorage
       saveToLocalStorage(result.data, result.sheetName || null, sheetUrl);
     } catch (error) {
-      console.error('Error loading sheet:', error);
+      devLog.error('Error loading sheet:', error);
       // Only show error if we have no cached data
       if (!hasLoadedRef.current) {
         setSheetError(error instanceof Error ? error.message : 'Erro ao carregar planilha.');
