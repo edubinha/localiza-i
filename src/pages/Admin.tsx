@@ -291,7 +291,7 @@ export default function Admin() {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Voltar
               </Button>
-              <h1 className="text-xl font-semibold">Configurações</h1>
+              <h1 className="text-xl font-semibold text-heading">Configurações</h1>
             </div>
             <span className="text-sm text-muted-foreground">{empresa.nome}</span>
           </div>
