@@ -57,7 +57,7 @@ export default function Login() {
     }
   };
   return <div className="min-h-screen bg-secondary/30 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md rounded-xl">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <img alt="LocalizAI" className="h-10" src="/lovable-uploads/f53f6c7d-d11b-49ba-bd6e-c80235b75d2a.png" />

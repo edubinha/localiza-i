@@ -207,7 +207,7 @@ export default function Admin() {
   if (!isAdminValidated) {
     return (
       <div className="min-h-screen bg-secondary/30 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md rounded-xl">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-2">
               <Settings className="h-12 w-12 text-primary" />
@@ -301,7 +301,7 @@ export default function Admin() {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto space-y-6">
           {/* Google Sheets Configuration */}
-          <Card>
+          <Card className="rounded-xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Link2 className="h-5 w-5" />
@@ -385,7 +385,7 @@ export default function Admin() {
           </Card>
 
           {/* Company Info */}
-          <Card>
+          <Card className="rounded-xl">
             <CardHeader>
               <CardTitle>Informações da Empresa</CardTitle>
             </CardHeader>
