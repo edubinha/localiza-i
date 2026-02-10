@@ -16,24 +16,31 @@ import { useIsMobile } from '@/hooks/use-mobile';
 interface NavigationMenuProps {
   destination: string;
   origin?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
-function buildGoogleMapsUrl(destination: string, origin?: string): string {
-  const baseUrl = 'https://www.google.com/maps/dir/';
-  const encodedDestination = encodeURIComponent(destination + ', Brasil');
-  const encodedOrigin = origin ? encodeURIComponent(origin) : '';
-  
-  return `${baseUrl}?api=1&origin=${encodedOrigin}&destination=${encodedDestination}`;
+function buildGoogleMapsUrl(destination: string, origin?: string, lat?: number, lon?: number): string {
+  const base = 'https://www.google.com/maps/dir/?api=1';
+  const dest = lat !== undefined && lon !== undefined
+    ? `${lat},${lon}`
+    : encodeURIComponent(destination + ', Brasil');
+  const originParam = origin ? `&origin=${encodeURIComponent(origin)}` : '';
+  return `${base}${originParam}&destination=${dest}`;
 }
 
-function buildWazeUrl(destination: string): string {
-  const encodedDestination = encodeURIComponent(destination + ', Brasil');
-  return `https://waze.com/ul?q=${encodedDestination}&navigate=yes`;
+function buildWazeUrl(destination: string, lat?: number, lon?: number): string {
+  if (lat !== undefined && lon !== undefined) {
+    return `waze://?ll=${lat},${lon}&navigate=yes`;
+  }
+  return `waze://?q=${encodeURIComponent(destination + ', Brasil')}`;
 }
 
-function buildAppleMapsUrl(destination: string): string {
-  const encodedDestination = encodeURIComponent(destination + ', Brasil');
-  return `maps://?daddr=${encodedDestination}`;
+function buildAppleMapsUrl(destination: string, lat?: number, lon?: number): string {
+  if (lat !== undefined && lon !== undefined) {
+    return `maps://?daddr=${lat},${lon}&dirflg=d`;
+  }
+  return `maps://?daddr=${encodeURIComponent(destination + ', Brasil')}&dirflg=d`;
 }
 
 // Check if running on iOS
@@ -81,10 +88,9 @@ interface NavigationOption {
   name: string;
   icon: React.ReactNode;
   url: string;
-  showOnIOS?: boolean;
 }
 
-export function NavigationMenu({ destination, origin }: NavigationMenuProps) {
+export function NavigationMenu({ destination, origin, latitude, longitude }: NavigationMenuProps) {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
   const showAppleMaps = isIOS();
@@ -93,22 +99,22 @@ export function NavigationMenu({ destination, origin }: NavigationMenuProps) {
     {
       name: 'Google Maps',
       icon: <GoogleMapsIcon className="h-5 w-5" />,
-      url: buildGoogleMapsUrl(destination, origin),
+      url: buildGoogleMapsUrl(destination, origin, latitude, longitude),
     },
     {
       name: 'Waze',
       icon: <WazeIcon className="h-5 w-5" />,
-      url: buildWazeUrl(destination),
+      url: buildWazeUrl(destination, latitude, longitude),
     },
     ...(showAppleMaps ? [{
       name: 'Apple Maps',
       icon: <AppleMapsIcon className="h-5 w-5" />,
-      url: buildAppleMapsUrl(destination),
+      url: buildAppleMapsUrl(destination, latitude, longitude),
     }] : []),
   ];
 
   const handleOptionClick = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.location.href = url;
     setOpen(false);
   };
 

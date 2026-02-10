@@ -75,6 +75,8 @@ interface RouteResult {
   name: string;
   distanceKm: number;
   durationMinutes: number;
+  latitude: number;
+  longitude: number;
   address?: string;
   number?: string;
   neighborhood?: string;
@@ -381,6 +383,8 @@ async function processBatchWithTableAPI(
         name: location.name,
         distanceKm: distance / 1000, // meters to km
         durationMinutes: duration / 60, // seconds to minutes
+        latitude: location.latitude,
+        longitude: location.longitude,
         address: location.address,
         number: location.number,
         neighborhood: location.neighborhood,
@@ -412,6 +416,8 @@ async function processBatchWithTableAPI(
         name: location.name,
         distanceKm: route.distance / 1000,
         durationMinutes: route.duration / 60,
+        latitude: location.latitude,
+        longitude: location.longitude,
         address: location.address,
         number: location.number,
         neighborhood: location.neighborhood,

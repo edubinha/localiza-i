@@ -130,7 +130,7 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
             <span className="font-medium">Endereço: </span>
             {fullAddress}
           </div>
-          <NavigationMenu destination={destination} origin={result.originAddress} />
+          <NavigationMenu destination={destination} origin={result.originAddress} latitude={result.latitude} longitude={result.longitude} />
         </div>
       )}
     </div>

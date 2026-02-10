@@ -61,6 +61,8 @@ export interface SearchResult {
   durationMinutes?: number;
   formattedDuration?: string;
   searchInfo?: string;
+  latitude?: number;
+  longitude?: number;
   address?: string;
   number?: string;
   neighborhood?: string;
@@ -405,6 +407,8 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
           durationMinutes: route.durationMinutes,
           formattedDuration: route.formattedDuration,
           searchInfo: coords.searchUsed !== 'endereço completo' ? coords.searchUsed : undefined,
+          latitude: route.latitude,
+          longitude: route.longitude,
           address: route.address,
           number: route.number,
           neighborhood: route.neighborhood,
