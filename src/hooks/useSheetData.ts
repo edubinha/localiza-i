@@ -20,7 +20,9 @@ async function fetchSheetData(googleSheetsUrl: string): Promise<SheetData> {
     throw new Error('URL da planilha não é permitida.');
   }
 
-  const response = await fetch(csvUrl);
+  const cacheBustUrl = new URL(csvUrl);
+  cacheBustUrl.searchParams.set('_cb', Date.now().toString());
+  const response = await fetch(cacheBustUrl.toString());
   if (!response.ok) {
     throw new Error('Não foi possível acessar a planilha. Verifique se ela está publicada na web.');
   }
