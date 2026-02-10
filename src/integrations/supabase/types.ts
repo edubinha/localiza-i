@@ -70,7 +70,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      empresas_public: {
+        Row: {
+          google_sheets_url: string | null
+          id: string | null
+          is_active: boolean | null
+          nome: string | null
+        }
+        Insert: {
+          google_sheets_url?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          nome?: string | null
+        }
+        Update: {
+          google_sheets_url?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          nome?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
