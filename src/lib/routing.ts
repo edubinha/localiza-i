@@ -50,7 +50,7 @@ export async function calculateRoutes(
       loc !== null && loc.haversineDistance <= MAX_HAVERSINE_DISTANCE_KM
     )
     .sort((a, b) => a.haversineDistance - b.haversineDistance)
-    .slice(0, 100); // Ensure we never exceed the limit
+    .slice(0, 30);
 
   if (nearbyLocations.length === 0) {
     return []; // No locations within range
