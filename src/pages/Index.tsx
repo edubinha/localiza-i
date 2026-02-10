@@ -198,13 +198,13 @@ const Index = () => {
       <Header />
       
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-2xl mx-auto space-y-5">
           {/* Introduction */}
           <div className="text-center mb-8">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-heading mb-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-heading mb-2">
               Onde encontrar ficou fácil.
             </h2>
-            <p className="text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Localize clínicas de saúde ocupacional próximas de você, de forma rápida e precisa.
             </p>
           </div>
@@ -256,7 +256,7 @@ const Index = () => {
 
           {/* Address Form - Only show when sheet is loaded */}
           {!isLoadingSheet && !sheetError && totalCount > 0 && <section>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
                 <span className="h-6 w-6 rounded-full bg-navy text-primary-foreground flex items-center justify-center text-xs font-bold">1</span>
                 Informe o endereço
               </h3>
@@ -265,7 +265,7 @@ const Index = () => {
 
           {/* Results */}
           {(hasSearched || isSearching || searchError) && <section>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
                 <span className="h-6 w-6 rounded-full bg-emerald text-primary-foreground flex items-center justify-center text-xs font-bold">2</span>
                 Resultados
               </h3>
