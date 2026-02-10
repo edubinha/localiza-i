@@ -47,12 +47,33 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          attempt_count: number
+          endpoint: string
+          identifier: string
+          window_start: string
+        }
+        Insert: {
+          attempt_count?: number
+          endpoint: string
+          identifier: string
+          window_start?: string
+        }
+        Update: {
+          attempt_count?: number
+          endpoint?: string
+          identifier?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_expired_rate_limits: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

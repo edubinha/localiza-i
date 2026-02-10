@@ -35,7 +35,16 @@ export default function Login() {
           access_key: accessKey.trim()
         }
       });
-      if (fnError || !responseData?.success || !responseData?.empresa) {
+      if (fnError) {
+        // Check for rate limiting (429)
+        if (fnError.message?.includes('429') || responseData?.error?.includes('Muitas tentativas')) {
+          setError('Muitas tentativas. Aguarde um momento e tente novamente.');
+        } else {
+          setError('Chave de acesso inválida. Verifique e tente novamente.');
+        }
+        return;
+      }
+      if (!responseData?.success || !responseData?.empresa) {
         setError('Chave de acesso inválida. Verifique e tente novamente.');
         return;
       }

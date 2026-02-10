@@ -16,8 +16,72 @@ interface ValidateRequest {
 }
 
 /**
+ * Database-based rate limiter using the rate_limits table.
+ * Uses service_role to bypass RLS.
+ */
+async function checkRateLimit(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  identifier: string,
+  endpoint: string,
+  maxAttempts: number,
+  windowSeconds: number
+): Promise<{ allowed: boolean; retryAfterSeconds?: number }> {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - windowSeconds * 1000);
+
+  // Try to get existing rate limit entry
+  const { data: existing } = await supabase
+    .from('rate_limits')
+    .select('attempt_count, window_start')
+    .eq('identifier', identifier)
+    .eq('endpoint', endpoint)
+    .single();
+
+  if (!existing) {
+    // No entry — create one
+    await supabase.from('rate_limits').upsert({
+      identifier,
+      endpoint,
+      attempt_count: 1,
+      window_start: now.toISOString(),
+    });
+    return { allowed: true };
+  }
+
+  const entryWindowStart = new Date(existing.window_start);
+
+  // Window expired — reset
+  if (entryWindowStart < windowStart) {
+    await supabase.from('rate_limits').upsert({
+      identifier,
+      endpoint,
+      attempt_count: 1,
+      window_start: now.toISOString(),
+    });
+    return { allowed: true };
+  }
+
+  // Within window — check count
+  if (existing.attempt_count >= maxAttempts) {
+    const retryAfterSeconds = Math.ceil(
+      (entryWindowStart.getTime() + windowSeconds * 1000 - now.getTime()) / 1000
+    );
+    return { allowed: false, retryAfterSeconds: Math.max(retryAfterSeconds, 1) };
+  }
+
+  // Increment
+  await supabase
+    .from('rate_limits')
+    .update({ attempt_count: existing.attempt_count + 1 })
+    .eq('identifier', identifier)
+    .eq('endpoint', endpoint);
+
+  return { allowed: true };
+}
+
+/**
  * Securely verify admin secret against stored bcrypt hash.
- * Uses bcrypt.compare which is timing-safe.
  */
 async function verifyAdminSecret(
   // deno-lint-ignore no-explicit-any
@@ -25,7 +89,6 @@ async function verifyAdminSecret(
   empresaId: string,
   adminSecret: string
 ): Promise<boolean> {
-  // Fetch the stored hash
   const { data, error } = await supabase
     .from('empresas')
     .select('admin_secret_hash')
@@ -36,7 +99,6 @@ async function verifyAdminSecret(
     return false;
   }
 
-  // Use bcrypt to compare - synchronous version for edge functions compatibility
   try {
     return bcrypt.compareSync(adminSecret, data.admin_secret_hash as string);
   } catch {
@@ -45,7 +107,6 @@ async function verifyAdminSecret(
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -60,20 +121,33 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
+
     const body: ValidateRequest = await req.json();
     const { action } = body;
+
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 
     // Action: Validate access_key
     if (action === 'validate') {
       const { access_key } = body;
-      
+
       if (!access_key) {
         return new Response(
           JSON.stringify({ error: 'access_key is required' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Rate limit: 5 attempts per IP per 60 seconds
+      const rl = await checkRateLimit(supabase, clientIp, 'validate', 5, 60);
+      if (!rl.allowed) {
+        return new Response(
+          JSON.stringify({ error: 'Muitas tentativas. Aguarde e tente novamente.' }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(rl.retryAfterSeconds) },
+          }
         );
       }
 
@@ -91,10 +165,9 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Return empresa data without admin_secret or hash
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           empresa: {
             id: data.id,
             nome: data.nome,
@@ -107,10 +180,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Action: Validate admin_secret using secure bcrypt comparison
+    // Action: Validate admin_secret
     if (action === 'admin-validate') {
       const { empresa_id, admin_secret } = body;
-      
+
       if (!empresa_id || !admin_secret) {
         return new Response(
           JSON.stringify({ error: 'empresa_id and admin_secret are required' }),
@@ -118,7 +191,18 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Verify admin_secret against bcrypt hash
+      // Rate limit: 3 attempts per empresa_id per 300 seconds (5 min)
+      const rl = await checkRateLimit(supabase, empresa_id, 'admin-validate', 3, 300);
+      if (!rl.allowed) {
+        return new Response(
+          JSON.stringify({ error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(rl.retryAfterSeconds) },
+          }
+        );
+      }
+
       const isValid = await verifyAdminSecret(supabase, empresa_id, admin_secret);
 
       if (!isValid) {
@@ -134,10 +218,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Action: Update settings (requires admin validation)
+    // Action: Update settings
     if (action === 'update-settings') {
       const { empresa_id, admin_secret, google_sheets_url } = body;
-      
+
       if (!empresa_id || !admin_secret) {
         return new Response(
           JSON.stringify({ error: 'empresa_id and admin_secret are required' }),
@@ -145,7 +229,18 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Verify admin_secret against bcrypt hash
+      // Rate limit: 10 attempts per empresa_id per 60 seconds
+      const rl = await checkRateLimit(supabase, empresa_id, 'update-settings', 10, 60);
+      if (!rl.allowed) {
+        return new Response(
+          JSON.stringify({ error: 'Muitas tentativas. Aguarde e tente novamente.' }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(rl.retryAfterSeconds) },
+          }
+        );
+      }
+
       const isAuthorized = await verifyAdminSecret(supabase, empresa_id, admin_secret);
 
       if (!isAuthorized) {
@@ -155,7 +250,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Update settings
       const { error: updateError } = await supabase
         .from('empresas')
         .update({ google_sheets_url })
