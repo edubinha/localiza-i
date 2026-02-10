@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useEmpresa } from '@/hooks/useEmpresa';
 import { supabase } from '@/integrations/supabase/client';
 import { KeyRound, Loader2, AlertCircle } from 'lucide-react';
-import logo from '@/assets/logo.svg';
+import logo from '@/assets/logo.png';
 export default function Login() {
   const [accessKey, setAccessKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -60,7 +60,7 @@ export default function Login() {
       <Card className="w-full max-w-md rounded-xl">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img alt="LocalizAI" className="h-10" src={logo} />
+            <img alt="LocalizAI" className="h-10 w-auto" src={logo} />
           </div>
           <CardTitle className="text-xl">Acesso à Plataforma</CardTitle>
           <CardDescription>
