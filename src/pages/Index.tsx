@@ -103,7 +103,11 @@ const Index = () => {
     toast.success('Download iniciado! Apenas prestadores ativos foram incluídos.');
   };
 
-  const handleSearchStart = (step?: 'geocoding' | 'routing') => {
+  const handleSearchStart = (step?: 'geocoding' | 'routing' | 'finished') => {
+    if (step === 'routing' || step === 'finished') {
+      setSearchStep(step);
+      return;
+    }
     setIsSearching(true);
     setSearchError(null);
     setResults([]);
