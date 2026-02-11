@@ -103,16 +103,10 @@ async function tryStructuredGeocode(params: {
       return null;
     }
 
-    // Validate that the result matches the expected city/state
-    const displayLower = data[0].display_name.toLowerCase();
-    const cityLower = params.city.toLowerCase();
-    const stateLower = params.state.toLowerCase();
-
-    // Check if the result contains the expected city and state
-    if (!displayLower.includes(cityLower) || !displayLower.includes(stateLower)) {
-      devLog.log(`Structured geocode result doesn't match expected location: ${data[0].display_name}`);
-      return null;
-    }
+    // Structured query already constrains results to the correct city/state,
+    // so we trust the result without additional display_name validation
+    // (which caused false negatives due to accent/abbreviation mismatches).
+    devLog.log(`Structured geocode result: ${data[0].display_name}`);
 
     return {
       lat: parseFloat(data[0].lat),
@@ -153,7 +147,8 @@ async function tryFreeTextGeocode(query: string, city?: string, state?: string):
       return null;
     }
 
-    // If we have city/state context, validate using structured address fields
+    // If we have city/state context, try to find a result matching city/state
+    // Use relaxed matching (contains) to handle accent/abbreviation differences
     if (city && state) {
       const normalizedCity = normalizeString(city);
       const normalizedState = normalizeString(state);
@@ -161,15 +156,17 @@ async function tryFreeTextGeocode(query: string, city?: string, state?: string):
       for (const result of data) {
         if (!result.address) continue;
 
-        // Nominatim uses different fields for city depending on location type
         const resultCity = result.address.city || 
                            result.address.town || 
                            result.address.municipality;
         const resultState = result.address.state;
 
         if (resultCity && resultState) {
-          const cityMatch = normalizeString(resultCity) === normalizedCity;
-          const stateMatch = normalizeString(resultState).includes(normalizedState);
+          const normResultCity = normalizeString(resultCity);
+          const normResultState = normalizeString(resultState);
+          // Use contains-based matching to handle partial names and abbreviations
+          const cityMatch = normResultCity.includes(normalizedCity) || normalizedCity.includes(normResultCity);
+          const stateMatch = normResultState.includes(normalizedState) || normalizedState.includes(normResultState);
 
           if (cityMatch && stateMatch) {
             return {
@@ -179,8 +176,12 @@ async function tryFreeTextGeocode(query: string, city?: string, state?: string):
           }
         }
       }
-      // No result matched the expected city/state with structured validation
-      return null;
+      // If no structured match, still use first result since the query already included city/state
+      devLog.log('Free-text: no structured address match, using first result');
+      return {
+        lat: parseFloat(data[0].lat),
+        lon: parseFloat(data[0].lon),
+      };
     }
 
     // Fall back to first result if no validation needed
