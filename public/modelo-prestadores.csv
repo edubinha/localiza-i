@@ -1,9 +1,9 @@
-Nome do local,ID,Serviços,Situação,CEP,Endereço (logradouro),Número,Bairro,Cidade,Estado (UF),Latitude,Longitude
-Clínica São Lucas,001,,Ativo,01310-100,Avenida Paulista,1000,Bela Vista,São Paulo,SP,-23.5505,-46.6333
-Laboratório Central,002,Somente exames complementares,Ativo,01305-100,Rua Augusta,500,Consolação,São Paulo,SP,-23.5489,-46.6388
-Centro Médico Saúde Total,003,,Ativo,01426-001,Rua Oscar Freire,200,Jardins,São Paulo,SP,-23.5629,-46.6544
-Hospital Santa Maria,004,,Ativo,01401-000,Avenida Brasil,1500,Jardim América,São Paulo,SP,-23.5875,-46.6580
-Clínica Vida Nova,005,,Inativo,02012-000,Rua das Flores,300,Santana,São Paulo,SP,-23.5200,-46.6100
-Laboratório Exames Express,006,Somente exames complementares,Ativo,04714-000,Avenida Santo Amaro,2000,Santo Amaro,São Paulo,SP,-23.6100,-46.6700
-Centro de Diagnóstico ABC,007,,Ativo,09010-140,Rua das Acácias,150,Centro,Santo André,SP,-23.6500,-46.5300
-Clínica Bem Estar,008,,Ativo,06015-030,Avenida dos Autonomistas,800,Centro,Osasco,SP,-23.5300,-46.7800
+Situação,ID,Clínica,Serviços,CEP,Endereço (logradouro),Número,Bairro,Cidade,Estado (UF),Latitude,Longitude
+Ativo,001,Clínica São Lucas,,01310-100,Avenida Paulista,1000,Bela Vista,São Paulo,SP,-23.5505,-46.6333
+Ativo,002,Laboratório Central,Somente exames complementares,01305-100,Rua Augusta,500,Consolação,São Paulo,SP,-23.5489,-46.6388
+Ativo,003,Centro Médico Saúde Total,,01426-001,Rua Oscar Freire,200,Jardins,São Paulo,SP,-23.5629,-46.6544
+Ativo,004,Hospital Santa Maria,,01401-000,Avenida Brasil,1500,Jardim América,São Paulo,SP,-23.5875,-46.6580
+Inativo,005,Clínica Vida Nova,,02012-000,Rua das Flores,300,Santana,São Paulo,SP,-23.5200,-46.6100
+Ativo,006,Laboratório Exames Express,Somente exames complementares,04714-000,Avenida Santo Amaro,2000,Santo Amaro,São Paulo,SP,-23.6100,-46.6700
+Ativo,007,Centro de Diagnóstico ABC,,09010-140,Rua das Acácias,150,Centro,Santo André,SP,-23.6500,-46.5300
+Ativo,008,Clínica Bem Estar,,06015-030,Avenida dos Autonomistas,800,Centro,Osasco,SP,-23.5300,-46.7800
