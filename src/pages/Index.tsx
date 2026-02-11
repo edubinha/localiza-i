@@ -198,14 +198,18 @@ const Index = () => {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={handleRefresh} 
-                      title="Atualizar dados da planilha"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={handleRefresh}>
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Atualizar dados da planilha</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>}
             </CardContent>
