@@ -49,6 +49,7 @@ const Index = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [searchStep, setSearchStep] = useState<'idle' | 'geocoding' | 'routing' | 'finished'>('idle');
   const resultsRef = useRef<HTMLDivElement>(null);
 
   // Reset search when locations change
@@ -102,11 +103,12 @@ const Index = () => {
     toast.success('Download iniciado! Apenas prestadores ativos foram incluídos.');
   };
 
-  const handleSearchStart = () => {
+  const handleSearchStart = (step?: 'geocoding' | 'routing') => {
     setIsSearching(true);
     setSearchError(null);
     setResults([]);
     setHasSearched(false);
+    setSearchStep(step || 'geocoding');
   };
 
   const handleResults = (newResults: SearchResult[]) => {
@@ -114,6 +116,7 @@ const Index = () => {
     setIsSearching(false);
     setSearchError(null);
     setHasSearched(true);
+    setSearchStep('idle');
 
     setTimeout(() => {
       resultsRef.current?.scrollIntoView({
@@ -127,6 +130,7 @@ const Index = () => {
     setSearchError(error);
     setIsSearching(false);
     setResults([]);
+    setSearchStep('idle');
   };
 
   return <div className="min-h-screen bg-slate-50">
@@ -230,7 +234,7 @@ const Index = () => {
                 <span className="h-6 w-6 rounded-full bg-emerald text-primary-foreground flex items-center justify-center text-xs font-bold">2</span>
                 Resultados
               </h3>
-              <ResultsList ref={resultsRef} results={results} isLoading={isSearching} error={searchError} />
+              <ResultsList ref={resultsRef} results={results} isLoading={isSearching} error={searchError} searchStep={searchStep} />
             </section>}
         </div>
       </main>

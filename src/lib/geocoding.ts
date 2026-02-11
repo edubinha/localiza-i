@@ -36,6 +36,30 @@ function normalizeString(str: string): string {
 const geocodingCache = new Map<string, GeocodingResult>();
 
 /**
+ * Fetch with exponential backoff retry for 429/503 responses.
+ * Retries up to 3 times with delays of 1s, 2s, 4s.
+ */
+async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const response = await fetch(url, options);
+
+    if (response.status === 429 || response.status === 503) {
+      const delayMs = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+      devLog.log(`Geocoding: status ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+      lastError = new Error(`Serviço de geocodificação ocupado (HTTP ${response.status})`);
+      continue;
+    }
+
+    return response;
+  }
+
+  throw lastError || new Error('Serviço de geocodificação ocupado. Tente novamente em alguns segundos.');
+}
+
+/**
  * Structured geocoding using Nominatim's structured query parameters.
  * This ensures results are restricted to the correct city/state.
  */
@@ -63,7 +87,7 @@ async function tryStructuredGeocode(params: {
 
     const url = `https://nominatim.openstreetmap.org/search?${searchParams}`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       headers: {
         'User-Agent': 'LocalizAI/1.0',
       },
@@ -110,7 +134,7 @@ async function tryFreeTextGeocode(query: string, city?: string, state?: string):
     const encodedQuery = encodeURIComponent(query);
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&countrycodes=br&limit=5&addressdetails=1`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       headers: {
         'User-Agent': 'LocalizAI/1.0',
       },
