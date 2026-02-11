@@ -1,11 +1,32 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+// CORS configuration - allowlist for production and preview domains
+const ALLOWED_ORIGINS = [
+  'https://localiza-i.lovable.app',
+  'http://localhost:5173',
+  'http://localhost:8080',
+];
+
+const LOVABLE_PREVIEW_PATTERN = /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/;
+const LOVABLE_PREVIEW_ID_PATTERN = /^https:\/\/id-preview--[a-z0-9-]+\.lovable\.app$/;
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  if (LOVABLE_PREVIEW_PATTERN.test(origin)) return true;
+  if (LOVABLE_PREVIEW_ID_PATTERN.test(origin)) return true;
+  return false;
+}
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : '';
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin || '',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+}
 
 interface ValidateRequest {
   action: 'validate' | 'admin-validate' | 'update-settings';
@@ -107,6 +128,9 @@ async function verifyAdminSecret(
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get('Origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
