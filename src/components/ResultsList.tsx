@@ -1,4 +1,4 @@
-import { useState, forwardRef } from 'react';
+import { useState, useEffect, useRef, forwardRef } from 'react';
 import { MapPin, Navigation, Info, ChevronDown, ChevronUp, FlaskConical, MapPinned } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,54 @@ interface ResultsListProps {
   isLoading: boolean;
   error: string | null;
   searchStep?: 'idle' | 'geocoding' | 'routing' | 'finished';
+}
+
+const GEOCODING_MESSAGES = [
+  'Validando localização...',
+  'Consultando serviço de mapas...',
+  'Localizando coordenadas...',
+];
+
+const ROUTING_MESSAGES = [
+  'Calculando melhores rotas...',
+  'Analisando trajetos disponíveis...',
+  'Buscando caminhos mais rápidos...',
+  'Quase lá, finalizando cálculos...',
+];
+
+function useRotatingMessage(messages: string[], isActive: boolean) {
+  const [index, setIndex] = useState(0);
+  const startTime = useRef(Date.now());
+
+  useEffect(() => {
+    if (!isActive) {
+      setIndex(0);
+      startTime.current = Date.now();
+      return;
+    }
+
+    setIndex(0);
+    startTime.current = Date.now();
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime.current;
+      // Adaptive: first message stays 3s, then increases interval progressively
+      const baseDelay = 3000;
+      const extraDelay = Math.min(Math.floor(elapsed / 8000) * 1000, 3000);
+      const currentDelay = baseDelay + extraDelay;
+
+      setIndex(prev => {
+        const next = prev + 1;
+        return next < messages.length ? next : prev; // stay on last message
+      });
+
+      // Clear and restart with new adaptive interval
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [isActive, messages]);
+
+  return messages[index];
 }
 
 function formatLocation(neighborhood?: string, city?: string, state?: string): string {
@@ -143,10 +191,11 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
   function ResultsList({ results, isLoading, error, searchStep }, ref) {
     const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
 
-    const loadingMessage = searchStep === 'routing'
-      ? 'Calculando melhores rotas...'
-      : 'Validando localização...';
-    
+    const isGeocoding = isLoading && searchStep !== 'routing';
+    const isRouting = isLoading && searchStep === 'routing';
+    const geocodingMsg = useRotatingMessage(GEOCODING_MESSAGES, isGeocoding);
+    const routingMsg = useRotatingMessage(ROUTING_MESSAGES, isRouting);
+    const loadingMessage = isRouting ? routingMsg : geocodingMsg;
     if (isLoading) {
       return (
         <Card ref={ref} className="rounded-xl">
