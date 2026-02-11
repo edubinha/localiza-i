@@ -80,15 +80,15 @@ const Index = () => {
     ]);
 
     const escapeField = (field: string) => {
-      if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+      if (field.includes(';') || field.includes('"') || field.includes('\n')) {
         return `"${field.replace(/"/g, '""')}"`;
       }
       return field;
     };
 
     const csvContent = [
-      headers.map(escapeField).join(','),
-      ...rows.map(row => row.map(escapeField).join(',')),
+      headers.map(escapeField).join(';'),
+      ...rows.map(row => row.map(escapeField).join(';')),
     ].join('\n');
 
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
