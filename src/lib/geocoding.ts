@@ -232,13 +232,31 @@ export async function geocodeAddress(
     }
   }
 
+  // Respect Nominatim's 1 req/s policy between strategies
   // Strategy 2 (fallback): Free-text with full address
   if (!result) {
+    // Wait 1.1s to respect Nominatim rate-limit (1 req/s)
+    if (street) {
+      await new Promise(resolve => setTimeout(resolve, 1100));
+    }
     const parts = [street, number, neighborhood, city, state, 'Brasil'].filter(Boolean);
     const freeTextQuery = parts.join(', ');
     result = await tryFreeTextGeocode(freeTextQuery, city, state);
     if (result) {
       searchUsed = 'busca textual';
+    }
+  }
+
+  // Strategy 3 (last resort): Just city + state
+  if (!result) {
+    await new Promise(resolve => setTimeout(resolve, 1100));
+    result = await tryStructuredGeocode({
+      city,
+      state,
+      country: 'Brasil',
+    });
+    if (result) {
+      searchUsed = 'apenas cidade';
     }
   }
 
