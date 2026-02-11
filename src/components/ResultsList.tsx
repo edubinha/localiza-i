@@ -153,17 +153,20 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Navigation className="h-5 w-5 text-emerald" />
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={loadingMessage}
-                  initial={{ opacity: 0, x: 40 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -40 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                >
-                  {loadingMessage}
-                </motion.span>
-              </AnimatePresence>
+              <div className="overflow-hidden flex-1">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={loadingMessage}
+                    className="block"
+                    initial={{ opacity: 0, x: 40 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -40 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  >
+                    {loadingMessage}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
