@@ -526,7 +526,8 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
                         placeholder="Ex: 123" 
                         {...field} 
                         disabled={isDisabled}
-                        autoComplete="off"
+                        inputMode="decimal"
+                        autoComplete="address-line2"
                       />
                     </FormControl>
                     <FormMessage />
