@@ -320,6 +320,25 @@ async function getOpenRouteServiceMatrix(
 }
 
 /**
+ * Fetch with exponential backoff retry for 429/503 responses.
+ */
+async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3): Promise<Response> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const response = await fetch(url, options);
+    if (response.status === 429 || response.status === 503) {
+      const delayMs = Math.pow(2, attempt) * 1000;
+      devLog.log(`OSRM: status ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+      await sleep(delayMs);
+      lastError = new Error(`OSRM service busy (HTTP ${response.status})`);
+      continue;
+    }
+    return response;
+  }
+  throw lastError || new Error('OSRM service busy');
+}
+
+/**
  * Use OSRM Table API as fallback for calculating distances.
  * Free but may have less accurate/updated data.
  */
@@ -338,7 +357,7 @@ async function getOSRMTableDistances(
 
     const url = `https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=distance,duration`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       headers: {
         "User-Agent": "LocalizAI/1.0",
       },
@@ -427,7 +446,7 @@ async function processBatchWithTableAPI(
     try {
       const url = `https://router.project-osrm.org/route/v1/driving/${originLon},${originLat};${location.longitude},${location.latitude}?overview=false`;
 
-      const response = await fetch(url, {
+      const response = await fetchWithRetry(url, {
         headers: { "User-Agent": "LocalizAI/1.0" },
       });
 

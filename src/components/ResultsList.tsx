@@ -12,6 +12,7 @@ interface ResultsListProps {
   results: SearchResult[];
   isLoading: boolean;
   error: string | null;
+  searchStep?: 'idle' | 'geocoding' | 'routing' | 'finished';
 }
 
 function formatLocation(neighborhood?: string, city?: string, state?: string): string {
@@ -138,8 +139,12 @@ function ResultItem({ result, index }: { result: SearchResult; index: number }) 
 }
 
 export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
-  function ResultsList({ results, isLoading, error }, ref) {
+  function ResultsList({ results, isLoading, error, searchStep }, ref) {
     const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
+
+    const loadingMessage = searchStep === 'routing'
+      ? 'Calculando melhores rotas...'
+      : 'Validando localização...';
     
     if (isLoading) {
       return (
@@ -147,7 +152,7 @@ export const ResultsList = forwardRef<HTMLDivElement, ResultsListProps>(
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Navigation className="h-5 w-5 text-emerald" />
-              Buscando clínicas...
+              {loadingMessage}
             </CardTitle>
           </CardHeader>
           <CardContent>

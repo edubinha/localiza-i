@@ -78,7 +78,7 @@ interface AddressFormProps {
   locations: LocationData[];
   onResults: (results: SearchResult[]) => void;
   onError: (error: string) => void;
-  onSearchStart: () => void;
+  onSearchStart: (step?: 'geocoding' | 'routing') => void;
 }
 
 export function AddressForm({ locations, onResults, onError, onSearchStart }: AddressFormProps) {
@@ -363,7 +363,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
     }
 
     setIsSearching(true);
-    onSearchStart();
+    onSearchStart('geocoding');
 
     try {
       const stateName = brazilianStates.find(s => s.value === data.state)?.label || data.state;
@@ -378,14 +378,15 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
 
       if (!coords) {
         onError('Endereço não localizado. Tente informar mais detalhes como bairro ou CEP.');
-        setIsSearching(false);
         return;
       }
+
+      // Update step to routing
+      onSearchStart('routing');
 
       // Calculate real route distances using OSRM
       if (!empresa?.id) {
         onError('Sessão da empresa não encontrada. Por favor, faça login novamente.');
-        setIsSearching(false);
         return;
       }
 
