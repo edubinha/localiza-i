@@ -78,7 +78,7 @@ interface AddressFormProps {
   locations: LocationData[];
   onResults: (results: SearchResult[]) => void;
   onError: (error: string) => void;
-  onSearchStart: (step?: 'geocoding' | 'routing') => void;
+  onSearchStart: (step?: 'geocoding' | 'routing' | 'finished') => void;
 }
 
 export function AddressForm({ locations, onResults, onError, onSearchStart }: AddressFormProps) {
@@ -428,6 +428,7 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
         });
       }
 
+      onSearchStart('finished');
       onResults(sortedLocations);
     } catch (error) {
       devLog.error('Search error:', error);
