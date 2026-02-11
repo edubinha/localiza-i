@@ -119,6 +119,9 @@ async function tryStructuredGeocode(params: {
       lon: parseFloat(data[0].lon),
     };
   } catch (error) {
+    if (error instanceof Error && error.message.includes('ocupado')) {
+      throw error;
+    }
     devLog.error('Structured geocoding error:', error);
     return null;
   }
@@ -186,6 +189,9 @@ async function tryFreeTextGeocode(query: string, city?: string, state?: string):
       lon: parseFloat(data[0].lon),
     };
   } catch (error) {
+    if (error instanceof Error && error.message.includes('ocupado')) {
+      throw error;
+    }
     devLog.error('Free-text geocoding error:', error);
     return null;
   }
