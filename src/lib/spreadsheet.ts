@@ -64,7 +64,7 @@ function parseRows(jsonData: unknown[][]): ParseResult {
   const headers = headersRow.map((h) => String(h || ''));
 
   // Find column indexes
-  const nameColIndex = findColumn(headers, ['nome do local', 'nome', 'local', 'name']);
+  const nameColIndex = findColumn(headers, ['clinica', 'nome do local', 'nome', 'local', 'name']);
   const latColIndex = findColumn(headers, ['latitude', 'lat']);
   const lonColIndex = findColumn(headers, ['longitude', 'lon', 'long', 'lng']);
   const cepColIndex = findColumn(headers, ['cep']);
