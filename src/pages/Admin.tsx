@@ -228,7 +228,7 @@ export default function Admin() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleValidateAdmin} className="space-y-4">
-              <div className="relative overflow-hidden">
+              <div className="relative">
                 <Input
                   type={showAdminSecret ? 'text' : 'password'}
                   placeholder="Código administrativo"
@@ -236,12 +236,13 @@ export default function Admin() {
                   onChange={(e) => setAdminSecret(e.target.value)}
                   disabled={isValidating}
                   autoComplete="off"
-                  className="pr-10 text-base md:text-sm select-text touch-manipulation [&::-ms-reveal]:hidden [&::-ms-clear]:hidden [&::-webkit-credentials-auto-fill-button]:hidden [&::-webkit-textfield-decoration-container]:hidden [&::-webkit-clear-button]:hidden"
+                  className="pr-10 text-base md:text-sm select-text touch-manipulation [-webkit-appearance:none] [&::-ms-reveal]:hidden [&::-ms-clear]:hidden [&::-webkit-credentials-auto-fill-button]:hidden [&::-webkit-textfield-decoration-container]:hidden [&::-webkit-clear-button]:hidden"
+                  style={{ fontSize: '16px' }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowAdminSecret(!showAdminSecret)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
                   tabIndex={-1}
                   aria-label={showAdminSecret ? 'Ocultar senha' : 'Mostrar senha'}
                 >
