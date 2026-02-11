@@ -4,10 +4,12 @@ import { AddressForm, type SearchResult } from '@/components/AddressForm';
 import { ResultsList } from '@/components/ResultsList';
 import { useEmpresa } from '@/hooks/useEmpresa';
 import { useSheetData } from '@/hooks/useSheetData';
-import { Loader2, AlertCircle, FileSpreadsheet, RefreshCw, Clock } from 'lucide-react';
+import { Loader2, AlertCircle, FileSpreadsheet, RefreshCw, Clock, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 const formatRelativeTime = (date: Date): string => {
   const now = new Date();
@@ -61,6 +63,43 @@ const Index = () => {
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['locations', empresa?.google_sheets_url] });
+  };
+
+  const handleDownloadCSV = () => {
+    if (!locations.length) return;
+
+    const headers = ['Clínica', 'CEP', 'Endereço (logradouro)', 'Número', 'Bairro', 'Cidade', 'Estado (UF)'];
+    const rows = locations.map(loc => [
+      loc.name,
+      loc.cep ?? '',
+      loc.address ?? '',
+      loc.number ?? '',
+      loc.neighborhood ?? '',
+      loc.city ?? '',
+      loc.state ?? '',
+    ]);
+
+    const escapeField = (field: string) => {
+      if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+        return `"${field.replace(/"/g, '""')}"`;
+      }
+      return field;
+    };
+
+    const csvContent = [
+      headers.map(escapeField).join(','),
+      ...rows.map(row => row.map(escapeField).join(',')),
+    ].join('\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'prestadores_ativos.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast.success('Download iniciado! Apenas prestadores ativos foram incluídos.');
   };
 
   const handleSearchStart = () => {
@@ -142,14 +181,32 @@ const Index = () => {
                       )}
                     </div>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleRefresh} 
-                    title="Atualizar dados da planilha"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleDownloadCSV}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Baixar lista de credenciados (CSV)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={handleRefresh} 
+                      title="Atualizar dados da planilha"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>}
             </CardContent>
           </Card>
