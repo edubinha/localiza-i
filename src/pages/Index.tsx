@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Header } from '@/components/Header';
 import { AddressForm, type SearchResult } from '@/components/AddressForm';
 import { ResultsList } from '@/components/ResultsList';
 import { useEmpresa } from '@/hooks/useEmpresa';
 import { useSheetData } from '@/hooks/useSheetData';
-import { Loader2, AlertCircle, FileSpreadsheet, RefreshCw, Clock, Download } from 'lucide-react';
+import { Loader2, AlertCircle, FileSpreadsheet, RefreshCw, Clock, Download, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -31,7 +31,7 @@ const Index = () => {
   const { empresa } = useEmpresa();
   const queryClient = useQueryClient();
   
-  const { data: sheetData, isLoading: isLoadingSheet, error: sheetQueryError, dataUpdatedAt } = useSheetData(empresa?.google_sheets_url);
+  const { data: sheetData, isLoading: isLoadingSheet, isFetching: isFetchingSheet, error: sheetQueryError, dataUpdatedAt } = useSheetData(empresa?.google_sheets_url);
 
   const locations = sheetData?.locations ?? [];
   const sheetName = sheetData?.sheetName ?? null;
@@ -62,9 +62,25 @@ const Index = () => {
     prevLocationsRef.current = locations;
   }, [locations]);
 
-  const handleRefresh = () => {
+  const [refreshDone, setRefreshDone] = useState(false);
+  const wasFetchingRef = useRef(false);
+
+  // Track when a background refetch completes to show success feedback
+  useEffect(() => {
+    if (wasFetchingRef.current && !isFetchingSheet && !isLoadingSheet) {
+      wasFetchingRef.current = false;
+      setRefreshDone(true);
+      toast.success('Planilha atualizada com sucesso!');
+      const timer = setTimeout(() => setRefreshDone(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isFetchingSheet, isLoadingSheet]);
+
+  const handleRefresh = useCallback(() => {
+    if (isFetchingSheet) return; // prevent multiple clicks
+    wasFetchingRef.current = true;
     queryClient.refetchQueries({ queryKey: ['locations', empresa?.google_sheets_url] });
-  };
+  }, [isFetchingSheet, queryClient, empresa?.google_sheets_url]);
 
   const handleDownloadCSV = () => {
     if (!locations.length) return;
@@ -209,12 +225,23 @@ const Index = () => {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={handleRefresh}>
-                            <RefreshCw className="h-4 w-4" />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleRefresh}
+                            disabled={isFetchingSheet && !isLoadingSheet}
+                          >
+                            {refreshDone ? (
+                              <Check className="h-4 w-4 text-emerald" />
+                            ) : isFetchingSheet && !isLoadingSheet ? (
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Atualizar dados da planilha</p>
+                          <p>{isFetchingSheet && !isLoadingSheet ? 'Atualizando...' : refreshDone ? 'Atualizado!' : 'Atualizar dados da planilha'}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
