@@ -429,6 +429,8 @@ export function AddressForm({ locations, onResults, onError, onSearchStart }: Ad
       }
 
       onSearchStart('finished');
+      // Show "Quase lá..." message for at least 1.5s before delivering results
+      await new Promise(resolve => setTimeout(resolve, 1500));
       onResults(sortedLocations);
     } catch (error) {
       devLog.error('Search error:', error);
