@@ -63,7 +63,7 @@ const Index = () => {
   }, [locations]);
 
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['locations', empresa?.google_sheets_url] });
+    queryClient.refetchQueries({ queryKey: ['locations', empresa?.google_sheets_url] });
   };
 
   const handleDownloadCSV = () => {
