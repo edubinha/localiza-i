@@ -222,29 +222,6 @@ const Index = () => {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleRefresh}
-                            disabled={isFetchingSheet && !isLoadingSheet}
-                          >
-                            {refreshDone ? (
-                              <Check className="h-4 w-4 text-emerald" />
-                            ) : isFetchingSheet && !isLoadingSheet ? (
-                              <RefreshCw className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{isFetchingSheet && !isLoadingSheet ? 'Atualizando...' : refreshDone ? 'Atualizado!' : 'Atualizar dados da planilha'}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
                   </div>
                 </div>}
             </CardContent>
